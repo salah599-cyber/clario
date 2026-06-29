@@ -1,0 +1,446 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  PRINCIPAL
+  SIGNATORY
+  FINANCE
+  DIRECTOR
+  EXTERNAL
+}
+
+enum PermissionLevel {
+  FULL
+  READ
+  FILTERED
+  NONE
+  SHARED_ONLY
+}
+
+enum ModuleName {
+  DASHBOARD
+  ASSETS
+  DOCUMENTS
+  EXPENSES
+  REPORTS
+  USERS
+  AUDIT
+}
+
+enum AssetCategory {
+  REAL_ESTATE
+  PRIVATE_EQUITY
+  PUBLIC_EQUITY
+  FIXED_ASSET
+  BONDS
+  CASH
+  OTHER
+}
+
+enum AssetStatus {
+  ACTIVE
+  MONITOR
+  EXITED
+  DEFERRED
+}
+
+enum FixedAssetType {
+  VEHICLE
+  JEWELRY
+  ART
+  OTHER
+}
+
+enum LiabilityType {
+  MORTGAGE
+  LOAN
+  CREDIT
+  OTHER
+}
+
+enum LiabilityStatus {
+  ACTIVE
+  PAID_OFF
+  DEFAULTED
+}
+
+enum DocumentCategory {
+  KYC
+  LEGAL
+  PROPERTY
+  CORPORATE
+  TAX
+  BANKING
+  OTHER
+}
+
+enum DocumentStatus {
+  VALID
+  EXPIRING_SOON
+  EXPIRED
+  PENDING
+  UNDER_REVIEW
+}
+
+enum ExpenseStatus {
+  PAID
+  PENDING
+  OVERDUE
+}
+
+enum CashFlowType {
+  INFLOW
+  OUTFLOW
+}
+
+model User {
+  id                  String                   @id @default(cuid())
+  clerkId             String                   @unique
+  email               String                   @unique
+  firstName           String?
+  lastName            String?
+  role                UserRole                 @default(EXTERNAL)
+  isActive            Boolean                  @default(true)
+  entityAccess        UserEntityAccess[]
+  documentScopes      UserDocumentScope[]
+  permissionOverrides UserPermissionOverride[]
+  auditLogs           AuditLog[]
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+}
+
+model UserEntityAccess {
+  id       String @id @default(cuid())
+  userId   String
+  entityId String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entity   Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  @@unique([userId, entityId])
+}
+
+model UserDocumentScope {
+  id       String           @id @default(cuid())
+  userId   String
+  category DocumentCategory
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, category])
+}
+
+model UserPermissionOverride {
+  id     String          @id @default(cuid())
+  userId String
+  module ModuleName
+  level  PermissionLevel
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, module])
+}
+
+model Entity {
+  id           String             @id @default(cuid())
+  name         String             @unique
+  description  String?
+  assets       Asset[]
+  liabilities  Liability[]
+  bankAccounts BankAccount[]
+  documents    Document[]
+  expenses     Expense[]
+  userAccess   UserEntityAccess[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+model FxRate {
+  id           String   @id @default(cuid())
+  fromCurrency String
+  toCurrency   String   @default("OMR")
+  rate         Decimal  @db.Decimal(18, 8)
+  effectiveAt  DateTime @default(now())
+  updatedById  String?
+  createdAt    DateTime @default(now())
+  @@unique([fromCurrency, toCurrency, effectiveAt])
+}
+
+model Asset {
+  id              String                @id @default(cuid())
+  name            String
+  description     String?
+  category        AssetCategory
+  status          AssetStatus           @default(ACTIVE)
+  acquisitionDate DateTime?
+  acquisitionCost Decimal?              @db.Decimal(18, 2)
+  currentValue    Decimal?              @db.Decimal(18, 2)
+  currency        String                @default("OMR")
+  valueUpdatedAt  DateTime?
+  ownershipPct    Decimal               @default(100) @db.Decimal(5, 2)
+  entityId        String
+  entity          Entity                @relation(fields: [entityId], references: [id])
+  managerName     String?
+  managerEmail    String?
+  managerPhone    String?
+  managerNotes    String?
+  realEstate      RealEstateDetail?
+  privateEquity   PrivateEquityDetail?
+  fixedAsset      FixedAssetDetail?
+  bond            BondDetail?
+  cash            CashDetail?
+  custom          CustomAssetDetail?
+  publicHoldings  PublicEquityHolding[]
+  valuations      AssetValuation[]
+  cashFlows       AssetCashFlow[]
+  documents       Document[]
+  expenses        Expense[]
+  liabilities     Liability[]
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  @@index([entityId, category, status])
+}
+
+model RealEstateDetail {
+  id         String @id @default(cuid())
+  assetId    String @unique
+  asset      Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  titleDeed  String?
+  plotNumber String?
+  bua        String?
+  location   String?
+}
+
+model PrivateEquityDetail {
+  id                 String   @id @default(cuid())
+  assetId            String   @unique
+  asset              Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  shareholdingPct    Decimal? @db.Decimal(5, 2)
+  valuationMethod    String?
+  lastRoundValuation Decimal? @db.Decimal(18, 2)
+  followOnRounds     String?
+  registeredHolder   String?
+  contactName        String?
+  contactEmail       String?
+  contactPhone       String?
+}
+
+model PublicEquityHolding {
+  id            String       @id @default(cuid())
+  assetId       String
+  asset         Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  symbol        String
+  name          String?
+  quantity      Decimal      @db.Decimal(18, 6)
+  costBasis     Decimal?     @db.Decimal(18, 2)
+  marketPrice   Decimal?     @db.Decimal(18, 4)
+  marketValue   Decimal?     @db.Decimal(18, 2)
+  unrealisedPnl Decimal?     @db.Decimal(18, 2)
+  broker        String?
+  accountNumber String?
+  currency      String       @default("USD")
+  asOfDate      DateTime?
+  importBatchId String?
+  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id])
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  @@index([assetId, symbol])
+}
+
+model FixedAssetDetail {
+  id          String         @id @default(cuid())
+  assetId     String         @unique
+  asset       Asset          @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assetType   FixedAssetType @default(OTHER)
+  condition   String?
+  reportNotes String?
+}
+
+model BondDetail {
+  id              String    @id @default(cuid())
+  assetId         String    @unique
+  asset           Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  issuer          String?
+  maturityDate    DateTime?
+  couponRate      Decimal?  @db.Decimal(8, 4)
+  floorRate       Decimal?  @db.Decimal(8, 4)
+  strike          Decimal?  @db.Decimal(18, 4)
+  faceValue       Decimal?  @db.Decimal(18, 2)
+  shariaCompliant Boolean   @default(false)
+}
+
+model CashDetail {
+  id            String   @id @default(cuid())
+  assetId       String   @unique
+  asset         Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  bank          String?
+  accountNumber String?
+  balance       Decimal? @db.Decimal(18, 2)
+}
+
+model CustomAssetDetail {
+  id           String @id @default(cuid())
+  assetId      String @unique
+  asset        Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  customFields Json?
+}
+
+model BankAccount {
+  id            String   @id @default(cuid())
+  entityId      String?
+  entity        Entity?  @relation(fields: [entityId], references: [id])
+  accountName   String
+  bankName      String
+  accountNumber String
+  sortCode      String?
+  swiftCode     String?
+  iban          String?
+  currency      String   @default("OMR")
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Liability {
+  id           String          @id @default(cuid())
+  name         String
+  type         LiabilityType
+  status       LiabilityStatus @default(ACTIVE)
+  amount       Decimal         @db.Decimal(18, 2)
+  currency     String          @default("OMR")
+  interestRate Decimal?        @db.Decimal(8, 4)
+  maturityDate DateTime?
+  entityId     String
+  entity       Entity          @relation(fields: [entityId], references: [id])
+  assetId      String?
+  asset        Asset?          @relation(fields: [assetId], references: [id])
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model AssetValuation {
+  id        String   @id @default(cuid())
+  assetId   String
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  value     Decimal  @db.Decimal(18, 2)
+  currency  String   @default("OMR")
+  valuedAt  DateTime @default(now())
+  notes     String?
+  createdAt DateTime @default(now())
+  @@index([assetId, valuedAt])
+}
+
+model AssetCashFlow {
+  id          String       @id @default(cuid())
+  assetId     String
+  asset       Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  type        CashFlowType
+  amount      Decimal      @db.Decimal(18, 2)
+  currency    String       @default("OMR")
+  occurredAt  DateTime
+  description String?
+  createdAt   DateTime     @default(now())
+}
+
+model Document {
+  id          String           @id @default(cuid())
+  name        String
+  fileName    String
+  fileUrl     String
+  mimeType    String
+  fileSize    Int
+  category    DocumentCategory
+  status      DocumentStatus   @default(VALID)
+  expiryDate  DateTime?
+  entityId    String?
+  entity      Entity?          @relation(fields: [entityId], references: [id])
+  assetId     String?
+  asset       Asset?           @relation(fields: [assetId], references: [id])
+  individual  String?
+  tags        DocumentTag[]
+  shares      DocumentShare[]
+  auditEvents DocumentAudit[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  @@index([category, status, expiryDate])
+}
+
+model DocumentTag {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  tag        String
+  @@unique([documentId, tag])
+}
+
+model DocumentShare {
+  id         String    @id @default(cuid())
+  documentId String
+  document   Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  token      String    @unique
+  expiresAt  DateTime
+  createdBy  String
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+model DocumentAudit {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId     String?
+  action     String
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+}
+
+model Expense {
+  id             String        @id @default(cuid())
+  title          String
+  description    String?
+  amount         Decimal       @db.Decimal(18, 2)
+  currency       String        @default("OMR")
+  category       String
+  isRecurring    Boolean       @default(false)
+  recurrenceRule String?
+  dueDate        DateTime?
+  nextDueDate    DateTime?
+  status         ExpenseStatus @default(PENDING)
+  entityId       String?
+  entity         Entity?       @relation(fields: [entityId], references: [id])
+  assetId        String?
+  asset          Asset?        @relation(fields: [assetId], references: [id])
+  assignedTo     String?
+  reminderDays   Int           @default(7)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  @@index([status, dueDate])
+}
+
+model ExpenseReminderConfig {
+  id              String @id @default(cuid())
+  defaultLeadDays Int    @default(7)
+}
+
+model ImportBatch {
+  id         String                @id @default(cuid())
+  fileName   String
+  uploadedBy String
+  rowCount   Int
+  holdings   PublicEquityHolding[]
+  createdAt  DateTime              @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  resource   String
+  resourceId String?
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  @@index([createdAt])
+  @@index([resource, resourceId])
+}

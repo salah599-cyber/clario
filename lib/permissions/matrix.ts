@@ -1,0 +1,49 @@
+import type { ModuleName, PermissionLevel, UserRole } from "./types";
+
+export const ROLE_MATRIX: Record<UserRole, Record<ModuleName, PermissionLevel>> = {
+  PRINCIPAL: {
+    DASHBOARD: "FULL",
+    ASSETS: "FULL",
+    DOCUMENTS: "FULL",
+    EXPENSES: "FULL",
+    REPORTS: "FULL",
+    USERS: "FULL",
+    AUDIT: "FULL",
+  },
+  SIGNATORY: {
+    DASHBOARD: "FULL",
+    ASSETS: "READ",
+    DOCUMENTS: "READ",
+    EXPENSES: "NONE",
+    REPORTS: "READ",
+    USERS: "NONE",
+    AUDIT: "NONE",
+  },
+  FINANCE: {
+    DASHBOARD: "READ",
+    ASSETS: "READ",
+    DOCUMENTS: "FILTERED",
+    EXPENSES: "FULL",
+    REPORTS: "FILTERED",
+    USERS: "NONE",
+    AUDIT: "NONE",
+  },
+  DIRECTOR: {
+    DASHBOARD: "READ",
+    ASSETS: "FILTERED",
+    DOCUMENTS: "FILTERED",
+    EXPENSES: "NONE",
+    REPORTS: "FILTERED",
+    USERS: "NONE",
+    AUDIT: "NONE",
+  },
+  EXTERNAL: {
+    DASHBOARD: "NONE",
+    ASSETS: "NONE",
+    DOCUMENTS: "SHARED_ONLY",
+    EXPENSES: "NONE",
+    REPORTS: "NONE",
+    USERS: "NONE",
+    AUDIT: "NONE",
+  },
+};
