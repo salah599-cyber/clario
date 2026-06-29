@@ -107,3 +107,52 @@ export async function deleteDocument(id: string) {
 
   revalidatePath("/documents");
 }
+
+export async function getDocument(id: string) {
+  const ctx = await requireModuleAccess("DOCUMENTS");
+  return db.document.findFirst({
+    where: { id, ...documentFilter(ctx) },
+    include: { entity: true },
+  });
+}
+
+export type UpdateDocumentInput = {
+  name: string;
+  category: DocumentCategory;
+  expiryDate?: string;
+  entityId?: string;
+};
+
+export async function updateDocument(id: string, input: UpdateDocumentInput) {
+  const ctx = await requireModuleAccess("DOCUMENTS");
+  if (!canWrite(ctx, "DOCUMENTS")) {
+    throw new Error("You do not have permission to update documents.");
+  }
+
+  const document = await db.document.findFirst({
+    where: { id, ...documentFilter(ctx) },
+  });
+  if (!document) throw new Error("Document not found.");
+
+  const updated = await db.document.update({
+    where: { id },
+    data: {
+      name: input.name.trim(),
+      category: input.category,
+      expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
+      entityId: input.entityId || null,
+    },
+  });
+
+  await logAudit({
+    userId: ctx.id,
+    action: "UPDATE",
+    resource: "Document",
+    resourceId: id,
+    metadata: { name: updated.name },
+  });
+
+  revalidatePath("/documents");
+  revalidatePath("/documents/" + id + "/edit");
+  return updated;
+}

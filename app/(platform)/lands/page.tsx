@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import { PlatformHeader } from "@/components/platform/platform-header";
 import { AddLinkButton } from "@/components/platform/add-link-button";
-import { DeleteEntryButton } from "@/components/platform/delete-entry-button";
+import { RowActions } from "@/components/platform/row-actions";
 import { listLands, deleteLand } from "@/lib/actions/lands";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
 import { ASSET_STATUS_LABELS } from "@/lib/labels";
@@ -62,7 +62,8 @@ export default async function LandsPage() {
                       <TableCell>{formatDate(land.updatedAt)}</TableCell>
                       {showAdd ? (
                         <TableCell>
-                          <DeleteEntryButton
+                          <RowActions
+                            editHref={"/lands/" + land.id + "/edit"}
                             itemId={land.id}
                             itemLabel={land.name}
                             deleteAction={deleteLand}

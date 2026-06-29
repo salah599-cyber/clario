@@ -1,6 +1,6 @@
 import { PlatformHeader } from "@/components/platform/platform-header";
 import { UploadDocumentForm } from "@/components/documents/upload-document-form";
-import { DeleteEntryButton } from "@/components/platform/delete-entry-button";
+import { RowActions } from "@/components/platform/row-actions";
 import { listDocuments, deleteDocument } from "@/lib/actions/documents";
 import { listEntities } from "@/lib/data/entities";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
@@ -73,7 +73,8 @@ export default async function DocumentsPage() {
                       <TableCell>{formatDate(doc.createdAt)}</TableCell>
                       {showUpload ? (
                         <TableCell>
-                          <DeleteEntryButton
+                          <RowActions
+                            editHref={"/documents/" + doc.id + "/edit"}
                             itemId={doc.id}
                             itemLabel={doc.name}
                             deleteAction={deleteDocument}

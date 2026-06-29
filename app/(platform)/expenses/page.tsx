@@ -1,6 +1,6 @@
 import { PlatformHeader } from "@/components/platform/platform-header";
 import { CreateExpenseForm } from "@/components/expenses/create-expense-form";
-import { DeleteEntryButton } from "@/components/platform/delete-entry-button";
+import { RowActions } from "@/components/platform/row-actions";
 import { listExpenses, deleteExpense } from "@/lib/actions/expenses";
 import { listEntities } from "@/lib/data/entities";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
@@ -68,7 +68,8 @@ export default async function ExpensesPage() {
                       <TableCell>{expense.entity?.name ?? "—"}</TableCell>
                       {showCreate ? (
                         <TableCell>
-                          <DeleteEntryButton
+                          <RowActions
+                            editHref={"/expenses/" + expense.id + "/edit"}
                             itemId={expense.id}
                             itemLabel={expense.title}
                             deleteAction={deleteExpense}

@@ -126,3 +126,62 @@ export async function deleteAsset(id: string) {
 
   revalidatePath("/assets");
 }
+
+export async function getAsset(id: string) {
+  const ctx = await requireModuleAccess("ASSETS");
+  return db.asset.findFirst({
+    where: { id, ...assetEntityFilter(ctx) },
+    include: { entity: true, landParcel: { select: { id: true } } },
+  });
+}
+
+export async function updateAsset(id: string, input: CreateAssetInput) {
+  const ctx = await requireModuleAccess("ASSETS");
+  if (!canWrite(ctx, "ASSETS")) {
+    throw new Error("You do not have permission to update assets.");
+  }
+
+  const asset = await db.asset.findFirst({
+    where: { id, ...assetEntityFilter(ctx) },
+    include: { landParcel: { select: { id: true } } },
+  });
+  if (!asset) throw new Error("Asset not found.");
+  if (asset.landParcel) {
+    throw new Error("This asset is linked to a land parcel. Edit it from the Lands section instead.");
+  }
+
+  if (ctx.entityIds.length > 0 && !ctx.entityIds.includes(input.entityId)) {
+    if (ctx.role !== "PRINCIPAL" && !ctx.isSuperAdmin) {
+      throw new Error("You do not have access to this entity.");
+    }
+  }
+
+  const currentValue = parseDecimal(input.currentValue);
+  const updated = await db.asset.update({
+    where: { id },
+    data: {
+      name: input.name.trim(),
+      entityId: input.entityId,
+      status: input.status,
+      currency: input.currency || "OMR",
+      acquisitionCost: parseDecimal(input.acquisitionCost),
+      currentValue,
+      description: input.description?.trim() || undefined,
+      managerName: input.managerName?.trim() || undefined,
+      managerEmail: input.managerEmail?.trim() || undefined,
+      valueUpdatedAt: currentValue ? new Date() : asset.valueUpdatedAt,
+    },
+  });
+
+  await logAudit({
+    userId: ctx.id,
+    action: "UPDATE",
+    resource: "Asset",
+    resourceId: id,
+    metadata: { name: updated.name },
+  });
+
+  revalidatePath("/assets");
+  revalidatePath("/assets/" + id + "/edit");
+  return updated;
+}

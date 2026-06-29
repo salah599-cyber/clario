@@ -23,3 +23,17 @@ export function formatDate(date: Date | string | null | undefined): string {
     year: "numeric",
   });
 }
+
+export function formatDateInput(date: Date | string | null | undefined): string {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+}
+
+export function formatDecimalInput(
+  value: number | string | { toString(): string } | null | undefined,
+): string {
+  if (value == null || value === "") return "";
+  return value.toString();
+}

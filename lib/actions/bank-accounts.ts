@@ -97,3 +97,57 @@ export async function deleteBankAccount(id: string) {
 
   revalidatePath("/assets/bank-details");
 }
+
+export async function getBankAccount(id: string) {
+  const ctx = await requireModuleAccess("ASSETS");
+  return db.bankAccount.findFirst({
+    where: { id, ...bankAccountFilter(ctx) },
+    include: { entity: true },
+  });
+}
+
+export async function updateBankAccount(id: string, input: CreateBankAccountInput) {
+  const ctx = await requireModuleAccess("ASSETS");
+  if (!canWrite(ctx, "ASSETS")) {
+    throw new Error("You do not have permission to update bank accounts.");
+  }
+
+  const account = await db.bankAccount.findFirst({
+    where: { id, ...bankAccountFilter(ctx) },
+  });
+  if (!account) throw new Error("Bank account not found.");
+
+  if (
+    input.entityId &&
+    ctx.entityIds.length > 0 &&
+    !ctx.entityIds.includes(input.entityId)
+  ) {
+    throw new Error("You do not have access to this entity.");
+  }
+
+  const updated = await db.bankAccount.update({
+    where: { id },
+    data: {
+      accountName: input.accountName.trim(),
+      bankName: input.bankName.trim(),
+      accountNumber: input.accountNumber.trim(),
+      iban: input.iban?.trim() || undefined,
+      swiftCode: input.swiftCode?.trim() || undefined,
+      sortCode: input.sortCode?.trim() || undefined,
+      currency: input.currency || "OMR",
+      entityId: input.entityId || undefined,
+      notes: input.notes?.trim() || undefined,
+    },
+  });
+
+  await logAudit({
+    userId: ctx.id,
+    action: "UPDATE",
+    resource: "BankAccount",
+    resourceId: id,
+    metadata: { accountName: updated.accountName },
+  });
+
+  revalidatePath("/assets/bank-details");
+  return updated;
+}

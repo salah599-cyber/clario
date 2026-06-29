@@ -94,3 +94,62 @@ export async function deleteExpense(id: string) {
 
   revalidatePath("/expenses");
 }
+
+export async function getExpense(id: string) {
+  const ctx = await requireModuleAccess("EXPENSES");
+  return db.expense.findFirst({
+    where: { id, ...expenseEntityFilter(ctx) },
+    include: { entity: true },
+  });
+}
+
+export async function updateExpense(id: string, input: CreateExpenseInput) {
+  const ctx = await requireModuleAccess("EXPENSES");
+  if (!canWrite(ctx, "EXPENSES")) {
+    throw new Error("You do not have permission to update expenses.");
+  }
+
+  const expense = await db.expense.findFirst({
+    where: { id, ...expenseEntityFilter(ctx) },
+  });
+  if (!expense) throw new Error("Expense not found.");
+
+  if (
+    input.entityId &&
+    ctx.entityIds.length > 0 &&
+    !ctx.entityIds.includes(input.entityId)
+  ) {
+    throw new Error("You do not have access to this entity.");
+  }
+
+  const amount = input.amount.trim();
+  if (!amount || Number.isNaN(parseFloat(amount))) {
+    throw new Error("A valid amount is required.");
+  }
+
+  const updated = await db.expense.update({
+    where: { id },
+    data: {
+      title: input.title.trim(),
+      amount,
+      currency: input.currency || "OMR",
+      category: input.category.trim(),
+      status: input.status,
+      dueDate: input.dueDate ? new Date(input.dueDate) : null,
+      isRecurring: input.isRecurring,
+      entityId: input.entityId || null,
+    },
+  });
+
+  await logAudit({
+    userId: ctx.id,
+    action: "UPDATE",
+    resource: "Expense",
+    resourceId: id,
+    metadata: { title: updated.title },
+  });
+
+  revalidatePath("/expenses");
+  revalidatePath("/expenses/" + id + "/edit");
+  return updated;
+}

@@ -1,6 +1,6 @@
 import { PlatformHeader } from "@/components/platform/platform-header";
 import { AddLinkButton } from "@/components/platform/add-link-button";
-import { DeleteEntryButton } from "@/components/platform/delete-entry-button";
+import { RowActions } from "@/components/platform/row-actions";
 import { listAssets, deleteAsset } from "@/lib/actions/assets";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
 import { ASSET_CATEGORY_LABELS, ASSET_STATUS_LABELS } from "@/lib/labels";
@@ -68,12 +68,13 @@ export default async function AssetsPage() {
                       <TableCell>{formatDate(asset.updatedAt)}</TableCell>
                       {showAdd ? (
                         <TableCell>
-                          <DeleteEntryButton
+                          <RowActions
+                            editHref={asset.landParcel ? undefined : "/assets/" + asset.id + "/edit"}
                             itemId={asset.id}
                             itemLabel={asset.name}
                             deleteAction={deleteAsset}
-                            disabled={!!asset.landParcel}
-                            disabledReason="Linked to a land parcel. Delete from Lands instead."
+                            disableDelete={!!asset.landParcel}
+                            disabledReason="Linked to a land parcel. Manage from Lands instead."
                           />
                         </TableCell>
                       ) : null}

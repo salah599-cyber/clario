@@ -330,3 +330,114 @@ export async function deleteLand(id: string) {
   revalidatePath("/lands");
   revalidatePath("/assets");
 }
+
+export async function updateLand(id: string, formData: FormData) {
+  const ctx = await requireModuleAccess("LANDS");
+  if (!canWrite(ctx, "LANDS")) {
+    throw new Error("You do not have permission to update land.");
+  }
+
+  const land = await db.landParcel.findFirst({
+    where: { id, ...landEntityFilter(ctx) },
+    include: { asset: { include: { realEstate: true } } },
+  });
+  if (!land) throw new Error("Land parcel not found.");
+
+  const name = String(formData.get("name") ?? "").trim();
+  const governorate = String(formData.get("governorate") ?? "").trim();
+  const wilayat = String(formData.get("wilayat") ?? "").trim();
+  const entityId = String(formData.get("entityId") ?? "").trim();
+  const status = String(formData.get("status") ?? "ACTIVE") as AssetStatus;
+
+  if (!name) throw new Error("Land name is required.");
+  if (!governorate) throw new Error("Governorate is required.");
+  if (!wilayat) throw new Error("Wilayat is required.");
+  if (!entityId) throw new Error("Entity is required.");
+
+  if (ctx.entityIds.length > 0 && !ctx.entityIds.includes(entityId)) {
+    if (ctx.role !== "PRINCIPAL" && !ctx.isSuperAdmin) {
+      throw new Error("You do not have access to this entity.");
+    }
+  }
+
+  const village = String(formData.get("village") ?? "").trim() || undefined;
+  const plotNumber = String(formData.get("plotNumber") ?? "").trim() || undefined;
+  const krookiNumber = String(formData.get("krookiNumber") ?? "").trim() || undefined;
+  const mulkiaNumber = String(formData.get("mulkiaNumber") ?? "").trim() || undefined;
+  const landUse = String(formData.get("landUse") ?? "").trim() || undefined;
+  const coordinates = String(formData.get("coordinates") ?? "").trim() || undefined;
+  const registeredHolder = String(formData.get("registeredHolder") ?? "").trim() || undefined;
+  const notes = String(formData.get("notes") ?? "").trim() || undefined;
+  const currency = String(formData.get("currency") ?? "OMR").trim() || "OMR";
+  const ownershipPct = parseDecimal(String(formData.get("ownershipPct") ?? "100")) ?? "100";
+  const areaSqm = parseDecimal(String(formData.get("areaSqm") ?? ""));
+  const acquisitionCost = parseDecimal(String(formData.get("acquisitionCost") ?? ""));
+  const currentValue = parseDecimal(String(formData.get("currentValue") ?? ""));
+  const acquisitionDate = parseDate(String(formData.get("acquisitionDate") ?? ""));
+
+  const location = buildLocation(governorate, wilayat, village);
+
+  const updated = await db.landParcel.update({
+    where: { id },
+    data: {
+      name,
+      governorate,
+      wilayat,
+      village,
+      plotNumber,
+      krookiNumber,
+      mulkiaNumber,
+      landUse,
+      areaSqm,
+      coordinates,
+      acquisitionDate,
+      acquisitionCost,
+      currentValue,
+      currency,
+      ownershipPct,
+      registeredHolder,
+      status,
+      notes,
+      entityId,
+    },
+  });
+
+  if (land.assetId) {
+    await db.asset.update({
+      where: { id: land.assetId },
+      data: {
+        name,
+        status,
+        entityId,
+        currency,
+        acquisitionDate,
+        acquisitionCost,
+        currentValue,
+        ownershipPct,
+        description: notes,
+        valueUpdatedAt: currentValue ? new Date() : land.asset?.valueUpdatedAt,
+        realEstate: {
+          update: {
+            plotNumber,
+            location,
+            titleDeed: mulkiaNumber,
+          },
+        },
+      },
+    });
+  }
+
+  await logAudit({
+    userId: ctx.id,
+    action: "UPDATE",
+    resource: "LandParcel",
+    resourceId: id,
+    metadata: { name: updated.name },
+  });
+
+  revalidatePath("/lands");
+  revalidatePath("/lands/" + id);
+  revalidatePath("/lands/" + id + "/edit");
+  revalidatePath("/assets");
+  return updated;
+}

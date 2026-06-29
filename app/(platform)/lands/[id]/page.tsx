@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PlatformHeader } from "@/components/platform/platform-header";
 import { DeleteEntryButton } from "@/components/platform/delete-entry-button";
+import { EditLinkButton } from "@/components/platform/edit-link-button";
 import { UploadLandDocumentsForm } from "@/components/lands/upload-land-documents-form";
 import { getLand, deleteLand, deleteLandDocument } from "@/lib/actions/lands";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
@@ -32,7 +33,9 @@ export default async function LandDetailPage({ params }: { params: Promise<{ id:
           <Button variant="outline" size="sm" asChild><Link href="/lands">Back to Lands</Link></Button>
           {land.assetId ? <Button variant="outline" size="sm" asChild><Link href="/assets">View in Assets</Link></Button> : null}
           {showUpload ? (
-            <DeleteEntryButton
+            <>
+              <EditLinkButton href={"/lands/" + land.id + "/edit"} />
+              <DeleteEntryButton
               itemId={land.id}
               itemLabel={land.name}
               deleteAction={deleteLand}
@@ -40,6 +43,7 @@ export default async function LandDetailPage({ params }: { params: Promise<{ id:
               title="Delete land parcel?"
               description="This will permanently delete the land parcel, linked asset, and all uploaded documents."
             />
+            </>
           ) : null}
         </div>
         <div className="grid gap-4 lg:grid-cols-3">

@@ -1,6 +1,6 @@
 import { PlatformHeader } from "@/components/platform/platform-header";
 import { AddLinkButton } from "@/components/platform/add-link-button";
-import { DeleteEntryButton } from "@/components/platform/delete-entry-button";
+import { RowActions } from "@/components/platform/row-actions";
 import { listBankAccounts, deleteBankAccount } from "@/lib/actions/bank-accounts";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
 import { formatDate } from "@/lib/format";
@@ -62,7 +62,8 @@ export default async function BankDetailsPage() {
                       <TableCell>{formatDate(account.updatedAt)}</TableCell>
                       {showAdd ? (
                         <TableCell>
-                          <DeleteEntryButton
+                          <RowActions
+                            editHref={"/assets/bank-details/" + account.id + "/edit"}
                             itemId={account.id}
                             itemLabel={account.accountName}
                             deleteAction={deleteBankAccount}
