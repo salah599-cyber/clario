@@ -1,7 +1,8 @@
 import { PlatformHeader } from "@/components/platform/platform-header";
 import { UploadDocumentForm } from "@/components/documents/upload-document-form";
 import { RowActions } from "@/components/platform/row-actions";
-import { listDocuments, deleteDocument } from "@/lib/actions/documents";
+import { listDocuments } from "@/lib/data/documents";
+import { deleteDocument } from "@/lib/actions/documents";
 import { listEntities } from "@/lib/data/entities";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
 import { DOCUMENT_CATEGORY_LABELS, DOCUMENT_STATUS_LABELS } from "@/lib/labels";
@@ -19,7 +20,7 @@ import {
 
 export default async function DocumentsPage() {
   const ctx = await requireModuleAccess("DOCUMENTS");
-  const [documents, entities] = await Promise.all([listDocuments(), listEntities()]);
+  const [documents, entities] = await Promise.all([listDocuments(ctx), listEntities()]);
   const showUpload = canWrite(ctx, "DOCUMENTS");
 
   return (

@@ -26,7 +26,10 @@ export function carEntityFilter(ctx: UserContext) {
 export function documentFilter(ctx: UserContext) {
   const level = getModulePermission(ctx, "DOCUMENTS");
   if (level === "FULL" || level === "READ") return {};
-  if (level === "FILTERED") return { category: { in: ctx.documentCategories as never[] } };
+  if (level === "FILTERED") {
+    if (ctx.documentCategories.length === 0) return { id: "__none__" };
+    return { category: { in: ctx.documentCategories as never[] } };
+  }
   if (level === "SHARED_ONLY") return { id: "__none__" };
   return { id: "__none__" };
 }

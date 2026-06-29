@@ -1,81 +1,61 @@
 "use server";
 
-import { put } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { deleteBlobUrl } from "@/lib/blob";
 import { logAudit } from "@/lib/audit/log";
-import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
+import { canWrite, getModulePermission, requireModuleAccess } from "@/lib/permissions/access";
 import { documentFilter } from "@/lib/permissions/scoped-queries";
 import type { DocumentCategory } from "@/lib/generated/prisma/client";
 
-export type CreateDocumentInput = {
+export type SaveDocumentMetadataInput = {
   name: string;
   category: DocumentCategory;
+  fileName: string;
+  fileUrl: string;
+  mimeType: string;
+  fileSize: number;
   expiryDate?: string;
   entityId?: string;
 };
 
-export async function createDocument(formData: FormData) {
+export async function saveDocumentMetadata(input: SaveDocumentMetadataInput) {
   const ctx = await requireModuleAccess("DOCUMENTS");
   if (!canWrite(ctx, "DOCUMENTS")) {
     throw new Error("You do not have permission to upload documents.");
   }
 
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) {
-    throw new Error(
-      "BLOB_READ_WRITE_TOKEN is not configured. Add it in Vercel project settings under Storage → Blob.",
-    );
-  }
-
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    throw new Error("A file is required.");
-  }
-
-  const name = String(formData.get("name") ?? "").trim();
-  const category = String(formData.get("category") ?? "") as DocumentCategory;
-  const expiryDateRaw = String(formData.get("expiryDate") ?? "").trim();
-  const entityIdRaw = String(formData.get("entityId") ?? "").trim();
-
+  const name = input.name.trim();
   if (!name) throw new Error("Document name is required.");
-  if (!category) throw new Error("Category is required.");
+  if (!input.category) throw new Error("Category is required.");
+  if (!input.fileUrl) throw new Error("File URL is required.");
 
+  const level = getModulePermission(ctx, "DOCUMENTS");
+  if (level === "FILTERED" && !ctx.documentCategories.includes(input.category)) {
+    throw new Error("You do not have permission to upload documents in this category.");
+  }
+
+  const entityId = input.entityId?.trim() || undefined;
   if (
-    entityIdRaw &&
+    entityId &&
     ctx.entityIds.length > 0 &&
-    !ctx.entityIds.includes(entityIdRaw) &&
+    !ctx.entityIds.includes(entityId) &&
     ctx.role !== "PRINCIPAL" &&
     !ctx.isSuperAdmin
   ) {
     throw new Error("You do not have access to this entity.");
   }
 
-  const pathname = "documents/" + Date.now() + "-" + file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-
-  let blob;
-  try {
-    blob = await put(pathname, file, {
-      access: "public",
-      token,
-      contentType: file.type || undefined,
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown storage error";
-    throw new Error("Failed to upload file to storage: " + message);
-  }
-
   const document = await db.document.create({
     data: {
       name,
-      fileName: file.name,
-      fileUrl: blob.url,
-      mimeType: file.type || "application/octet-stream",
-      fileSize: file.size,
-      category,
-      expiryDate: expiryDateRaw ? new Date(expiryDateRaw) : undefined,
-      entityId: entityIdRaw || undefined,
+      fileName: input.fileName,
+      fileUrl: input.fileUrl,
+      mimeType: input.mimeType || "application/octet-stream",
+      fileSize: input.fileSize,
+      category: input.category,
+      expiryDate: input.expiryDate ? new Date(input.expiryDate) : undefined,
+      entityId,
     },
   });
 
@@ -92,16 +72,7 @@ export async function createDocument(formData: FormData) {
   }
 
   revalidatePath("/documents");
-  return document;
-}
-
-export async function listDocuments() {
-  const ctx = await requireModuleAccess("DOCUMENTS");
-  return db.document.findMany({
-    where: documentFilter(ctx),
-    include: { entity: true },
-    orderBy: { updatedAt: "desc" },
-  });
+  return { id: document.id, name: document.name };
 }
 
 export async function deleteDocument(id: string) {
@@ -127,14 +98,6 @@ export async function deleteDocument(id: string) {
   });
 
   revalidatePath("/documents");
-}
-
-export async function getDocument(id: string) {
-  const ctx = await requireModuleAccess("DOCUMENTS");
-  return db.document.findFirst({
-    where: { id, ...documentFilter(ctx) },
-    include: { entity: true },
-  });
 }
 
 export type UpdateDocumentInput = {
@@ -175,5 +138,5 @@ export async function updateDocument(id: string, input: UpdateDocumentInput) {
 
   revalidatePath("/documents");
   revalidatePath("/documents/" + id + "/edit");
-  return updated;
+  return { id: updated.id, name: updated.name };
 }

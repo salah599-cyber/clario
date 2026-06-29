@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createDocument } from "@/lib/actions/documents";
+import { upload } from "@vercel/blob/client";
+import { saveDocumentMetadata } from "@/lib/actions/documents";
 import { DOCUMENT_CATEGORY_LABELS } from "@/lib/labels";
 import { MAX_UPLOAD_LABEL, validateUploadFileSize } from "@/lib/upload-limits";
+import type { DocumentCategory } from "@/lib/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +20,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type EntityOption = { id: string; name: string };
+
+function sanitizeFileName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
 
 export function UploadDocumentForm({ entities }: { entities: EntityOption[] }) {
   const router = useRouter();
@@ -34,21 +40,48 @@ export function UploadDocumentForm({ entities }: { entities: EntityOption[] }) {
 
     const form = e.currentTarget;
     const formData = new FormData(form);
-    formData.set("category", category);
-    formData.set("entityId", entityId === "none" ? "" : entityId);
-
     const file = formData.get("file");
-    if (file instanceof File && file.size > 0) {
-      const sizeError = validateUploadFileSize(file);
-      if (sizeError) {
-        setError(sizeError);
-        return;
-      }
+    if (!(file instanceof File) || file.size === 0) {
+      setError("A file is required.");
+      return;
+    }
+
+    const sizeError = validateUploadFileSize(file);
+    if (sizeError) {
+      setError(sizeError);
+      return;
+    }
+
+    const name = String(formData.get("name") ?? "").trim();
+    const expiryDateRaw = String(formData.get("expiryDate") ?? "").trim();
+    const entityIdValue = entityId === "none" ? "" : entityId;
+
+    if (!name) {
+      setError("Document name is required.");
+      return;
     }
 
     startTransition(async () => {
       try {
-        const doc = await createDocument(formData);
+        const pathname = "documents/" + Date.now() + "-" + sanitizeFileName(file.name);
+
+        const blob = await upload(pathname, file, {
+          access: "public",
+          handleUploadUrl: "/api/documents/upload",
+          multipart: file.size > 5 * 1024 * 1024,
+        });
+
+        const doc = await saveDocumentMetadata({
+          name,
+          category: category as DocumentCategory,
+          fileName: file.name,
+          fileUrl: blob.url,
+          mimeType: file.type || "application/octet-stream",
+          fileSize: file.size,
+          expiryDate: expiryDateRaw || undefined,
+          entityId: entityIdValue || undefined,
+        });
+
         setSuccess("Uploaded " + doc.name);
         form.reset();
         setEntityId("none");
