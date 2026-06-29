@@ -25,7 +25,7 @@ export async function createDocument(formData: FormData) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) {
     throw new Error(
-      "BLOB_READ_WRITE_TOKEN is not configured. Document uploads require Vercel Blob storage.",
+      "BLOB_READ_WRITE_TOKEN is not configured. Add it in Vercel project settings under Storage → Blob.",
     );
   }
 
@@ -42,12 +42,29 @@ export async function createDocument(formData: FormData) {
   if (!name) throw new Error("Document name is required.");
   if (!category) throw new Error("Category is required.");
 
+  if (
+    entityIdRaw &&
+    ctx.entityIds.length > 0 &&
+    !ctx.entityIds.includes(entityIdRaw) &&
+    ctx.role !== "PRINCIPAL" &&
+    !ctx.isSuperAdmin
+  ) {
+    throw new Error("You do not have access to this entity.");
+  }
+
   const pathname = "documents/" + Date.now() + "-" + file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const blob = await put(pathname, file, {
-    access: "public",
-    token,
-    contentType: file.type || undefined,
-  });
+
+  let blob;
+  try {
+    blob = await put(pathname, file, {
+      access: "public",
+      token,
+      contentType: file.type || undefined,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown storage error";
+    throw new Error("Failed to upload file to storage: " + message);
+  }
 
   const document = await db.document.create({
     data: {
@@ -62,13 +79,17 @@ export async function createDocument(formData: FormData) {
     },
   });
 
-  await logAudit({
-    userId: ctx.id,
-    action: "CREATE",
-    resource: "Document",
-    resourceId: document.id,
-    metadata: { name: document.name, category: document.category },
-  });
+  try {
+    await logAudit({
+      userId: ctx.id,
+      action: "CREATE",
+      resource: "Document",
+      resourceId: document.id,
+      metadata: { name: document.name, category: document.category },
+    });
+  } catch {
+    // Audit failure should not block a successful upload.
+  }
 
   revalidatePath("/documents");
   return document;
