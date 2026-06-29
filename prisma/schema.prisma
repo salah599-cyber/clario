@@ -26,11 +26,18 @@ enum PermissionLevel {
 enum ModuleName {
   DASHBOARD
   ASSETS
+  LANDS
   DOCUMENTS
   EXPENSES
   REPORTS
   USERS
   AUDIT
+}
+
+enum LandDocumentType {
+  KROOKI
+  MULKIA
+  OTHER
 }
 
 enum AssetCategory {
@@ -150,6 +157,7 @@ model Entity {
   bankAccounts BankAccount[]
   documents    Document[]
   expenses     Expense[]
+  landParcels  LandParcel[]
   userAccess   UserEntityAccess[]
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
@@ -196,19 +204,66 @@ model Asset {
   documents       Document[]
   expenses        Expense[]
   liabilities     Liability[]
+  landParcel      LandParcel?
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
   @@index([entityId, category, status])
 }
 
 model RealEstateDetail {
-  id         String @id @default(cuid())
-  assetId    String @unique
-  asset      Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  titleDeed  String?
-  plotNumber String?
-  bua        String?
-  location   String?
+  id          String  @id @default(cuid())
+  assetId     String  @unique
+  asset       Asset   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  titleDeed   String?
+  plotNumber  String?
+  bua         String?
+  location    String?
+  isEmptyLand Boolean @default(false)
+}
+
+model LandParcel {
+  id               String         @id @default(cuid())
+  name             String
+  governorate      String
+  wilayat          String
+  village          String?
+  plotNumber       String?
+  krookiNumber     String?
+  mulkiaNumber     String?
+  landUse          String?
+  areaSqm          Decimal?       @db.Decimal(18, 2)
+  coordinates      String?
+  acquisitionDate  DateTime?
+  acquisitionCost  Decimal?       @db.Decimal(18, 2)
+  currentValue     Decimal?       @db.Decimal(18, 2)
+  currency         String         @default("OMR")
+  ownershipPct     Decimal        @default(100) @db.Decimal(5, 2)
+  registeredHolder String?
+  status           AssetStatus    @default(ACTIVE)
+  notes            String?
+  entityId         String
+  entity           Entity         @relation(fields: [entityId], references: [id])
+  assetId          String?        @unique
+  asset            Asset?         @relation(fields: [assetId], references: [id])
+  documents        LandDocument[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  @@index([entityId, governorate, wilayat, status])
+}
+
+model LandDocument {
+  id           String           @id @default(cuid())
+  landParcelId String
+  landParcel   LandParcel       @relation(fields: [landParcelId], references: [id], onDelete: Cascade)
+  documentType LandDocumentType
+  label        String?
+  fileName     String
+  fileUrl      String
+  mimeType     String
+  fileSize     Int
+  uploadedById String?
+  createdAt    DateTime         @default(now())
+  @@index([landParcelId, documentType])
 }
 
 model PrivateEquityDetail {

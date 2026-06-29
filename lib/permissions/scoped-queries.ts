@@ -8,6 +8,13 @@ export function assetEntityFilter(ctx: UserContext) {
   return { id: "__none__" };
 }
 
+
+export function landEntityFilter(ctx: UserContext) {
+  const level = getModulePermission(ctx, "LANDS");
+  if (level === "FULL" || level === "READ") return {};
+  if (level === "FILTERED") return { entityId: { in: ctx.entityIds } };
+  return { id: "__none__" };
+}
 export function documentFilter(ctx: UserContext) {
   const level = getModulePermission(ctx, "DOCUMENTS");
   if (level === "FULL" || level === "READ") return {};

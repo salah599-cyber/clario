@@ -49,3 +49,18 @@ export const EXPENSE_CATEGORY_OPTIONS = [
   "Professional Fees",
   "Other",
 ] as const;
+
+export const LAND_USE_LABELS: Record<string, string> = {
+  RESIDENTIAL: "Residential",
+  COMMERCIAL: "Commercial",
+  AGRICULTURAL: "Agricultural",
+  INDUSTRIAL: "Industrial",
+  MIXED: "Mixed Use",
+  OTHER: "Other",
+};
+
+export const LAND_DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  KROOKI: "Krooki",
+  MULKIA: "Mulkia",
+  OTHER: "Other",
+};

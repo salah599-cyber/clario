@@ -11,6 +11,7 @@ import {
   Users,
   ScrollText,
   Landmark,
+  Map,
 } from "lucide-react";
 import {
   Sidebar,
@@ -27,6 +28,7 @@ import {
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/assets", label: "Assets", icon: Building2 },
+  { href: "/lands", label: "Lands", icon: Map },
   { href: "/assets/bank-details", label: "Bank Details", icon: Landmark },
   { href: "/documents", label: "Documents", icon: FileText },
   { href: "/expenses", label: "Expenses", icon: Receipt },

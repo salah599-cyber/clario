@@ -4,6 +4,7 @@ export const ROLE_MATRIX: Record<UserRole, Record<ModuleName, PermissionLevel>> 
   PRINCIPAL: {
     DASHBOARD: "FULL",
     ASSETS: "FULL",
+    LANDS: "FULL",
     DOCUMENTS: "FULL",
     EXPENSES: "FULL",
     REPORTS: "FULL",
@@ -13,6 +14,7 @@ export const ROLE_MATRIX: Record<UserRole, Record<ModuleName, PermissionLevel>> 
   SIGNATORY: {
     DASHBOARD: "FULL",
     ASSETS: "READ",
+    LANDS: "READ",
     DOCUMENTS: "READ",
     EXPENSES: "NONE",
     REPORTS: "READ",
@@ -22,6 +24,7 @@ export const ROLE_MATRIX: Record<UserRole, Record<ModuleName, PermissionLevel>> 
   FINANCE: {
     DASHBOARD: "READ",
     ASSETS: "READ",
+    LANDS: "READ",
     DOCUMENTS: "FILTERED",
     EXPENSES: "FULL",
     REPORTS: "FILTERED",
@@ -31,6 +34,7 @@ export const ROLE_MATRIX: Record<UserRole, Record<ModuleName, PermissionLevel>> 
   DIRECTOR: {
     DASHBOARD: "READ",
     ASSETS: "FILTERED",
+    LANDS: "FILTERED",
     DOCUMENTS: "FILTERED",
     EXPENSES: "NONE",
     REPORTS: "FILTERED",
@@ -40,6 +44,7 @@ export const ROLE_MATRIX: Record<UserRole, Record<ModuleName, PermissionLevel>> 
   EXTERNAL: {
     DASHBOARD: "NONE",
     ASSETS: "NONE",
+    LANDS: "NONE",
     DOCUMENTS: "SHARED_ONLY",
     EXPENSES: "NONE",
     REPORTS: "NONE",
