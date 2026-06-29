@@ -52,7 +52,14 @@ export default async function AssetsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {assets.map((asset) => (
+                  {assets.map((asset) => {
+                    const linkedModule = asset.landParcel
+                      ? "Lands"
+                      : asset.vehicle
+                        ? "Cars"
+                        : null;
+
+                    return (
                     <TableRow key={asset.id}>
                       <TableCell className="font-medium">{asset.name}</TableCell>
                       <TableCell>{ASSET_CATEGORY_LABELS[asset.category] ?? asset.category}</TableCell>
@@ -69,17 +76,26 @@ export default async function AssetsPage() {
                       {showAdd ? (
                         <TableCell>
                           <RowActions
-                            editHref={asset.landParcel ? undefined : "/assets/" + asset.id + "/edit"}
+                            editHref={linkedModule ? undefined : "/assets/" + asset.id + "/edit"}
                             itemId={asset.id}
                             itemLabel={asset.name}
                             deleteAction={deleteAsset}
-                            disableDelete={!!asset.landParcel}
-                            disabledReason="Linked to a land parcel. Manage from Lands instead."
+                            disableDelete={!!linkedModule}
+                            disabledReason={
+                              linkedModule
+                                ? "Linked to a " +
+                                  (asset.landParcel ? "land parcel" : "vehicle") +
+                                  ". Manage from " +
+                                  linkedModule +
+                                  " instead."
+                                : undefined
+                            }
                           />
                         </TableCell>
                       ) : null}
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}

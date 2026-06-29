@@ -92,6 +92,7 @@ export async function listAssets() {
     include: {
       entity: true,
       landParcel: { select: { id: true } },
+      vehicle: { select: { id: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
@@ -105,13 +106,19 @@ export async function deleteAsset(id: string) {
 
   const asset = await db.asset.findFirst({
     where: { id, ...assetEntityFilter(ctx) },
-    include: { landParcel: { select: { id: true } } },
+    include: {
+      landParcel: { select: { id: true } },
+      vehicle: { select: { id: true } },
+    },
   });
   if (!asset) throw new Error("Asset not found.");
   if (asset.landParcel) {
     throw new Error(
       "This asset is linked to a land parcel. Delete it from the Lands section instead.",
     );
+  }
+  if (asset.vehicle) {
+    throw new Error("This asset is linked to a vehicle. Delete it from the Cars section instead.");
   }
 
   await db.asset.delete({ where: { id } });
@@ -131,7 +138,11 @@ export async function getAsset(id: string) {
   const ctx = await requireModuleAccess("ASSETS");
   return db.asset.findFirst({
     where: { id, ...assetEntityFilter(ctx) },
-    include: { entity: true, landParcel: { select: { id: true } } },
+    include: {
+      entity: true,
+      landParcel: { select: { id: true } },
+      vehicle: { select: { id: true } },
+    },
   });
 }
 
@@ -143,11 +154,17 @@ export async function updateAsset(id: string, input: CreateAssetInput) {
 
   const asset = await db.asset.findFirst({
     where: { id, ...assetEntityFilter(ctx) },
-    include: { landParcel: { select: { id: true } } },
+    include: {
+      landParcel: { select: { id: true } },
+      vehicle: { select: { id: true } },
+    },
   });
   if (!asset) throw new Error("Asset not found.");
   if (asset.landParcel) {
     throw new Error("This asset is linked to a land parcel. Edit it from the Lands section instead.");
+  }
+  if (asset.vehicle) {
+    throw new Error("This asset is linked to a vehicle. Edit it from the Cars section instead.");
   }
 
   if (ctx.entityIds.length > 0 && !ctx.entityIds.includes(input.entityId)) {

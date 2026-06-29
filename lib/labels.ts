@@ -64,3 +64,35 @@ export const LAND_DOCUMENT_TYPE_LABELS: Record<string, string> = {
   MULKIA: "Mulkia",
   OTHER: "Other",
 };
+
+export const VEHICLE_CLASS_LABELS: Record<string, string> = {
+  PRIVATE: "Private",
+  COMMERCIAL: "Commercial",
+  GOVERNMENT: "Government",
+  DIPLOMATIC: "Diplomatic",
+  OTHER: "Other",
+};
+
+export const VEHICLE_BODY_TYPE_LABELS: Record<string, string> = {
+  SALOON: "Saloon",
+  SUV: "SUV / 4WD",
+  PICKUP: "Pickup",
+  COUPE: "Coupe",
+  VAN: "Van",
+  MOTORCYCLE: "Motorcycle",
+  OTHER: "Other",
+};
+
+export const VEHICLE_FUEL_TYPE_LABELS: Record<string, string> = {
+  PETROL: "Petrol",
+  DIESEL: "Diesel",
+  ELECTRIC: "Electric",
+  HYBRID: "Hybrid",
+  OTHER: "Other",
+};
+
+export const VEHICLE_DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  MULKIA: "Motor Vehicle License (Mulkia)",
+  INSURANCE: "Insurance",
+  OTHER: "Other",
+};

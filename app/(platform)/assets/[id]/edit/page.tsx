@@ -12,7 +12,7 @@ export default async function EditAssetPage({ params }: { params: Promise<{ id: 
 
   const [asset, entities] = await Promise.all([getAsset(id), listEntities()]);
   if (!asset) notFound();
-  if (asset.landParcel) forbidden();
+  if (asset.landParcel || asset.vehicle) forbidden();
 
   return (
     <>

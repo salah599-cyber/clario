@@ -12,6 +12,7 @@ import {
   ScrollText,
   Landmark,
   Map,
+  Car,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,6 +30,7 @@ const platformNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/assets", label: "Assets", icon: Building2 },
   { href: "/lands", label: "Lands", icon: Map },
+  { href: "/cars", label: "Cars", icon: Car },
   { href: "/assets/bank-details", label: "Bank Details", icon: Landmark },
   { href: "/documents", label: "Documents", icon: FileText },
   { href: "/expenses", label: "Expenses", icon: Receipt },

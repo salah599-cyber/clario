@@ -27,6 +27,7 @@ enum ModuleName {
   DASHBOARD
   ASSETS
   LANDS
+  CARS
   DOCUMENTS
   EXPENSES
   REPORTS
@@ -37,6 +38,12 @@ enum ModuleName {
 enum LandDocumentType {
   KROOKI
   MULKIA
+  OTHER
+}
+
+enum VehicleDocumentType {
+  MULKIA
+  INSURANCE
   OTHER
 }
 
@@ -173,6 +180,7 @@ model Entity {
   documents    Document[]
   expenses     Expense[]
   landParcels  LandParcel[]
+  vehicles     Vehicle[]
   userAccess   UserEntityAccess[]
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
@@ -220,6 +228,7 @@ model Asset {
   expenses        Expense[]
   liabilities     Liability[]
   landParcel      LandParcel?
+  vehicle         Vehicle?
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
   @@index([entityId, category, status])
@@ -279,6 +288,62 @@ model LandDocument {
   uploadedById String?
   createdAt    DateTime         @default(now())
   @@index([landParcelId, documentType])
+}
+
+model Vehicle {
+  id                     String            @id @default(cuid())
+  name                   String
+  plateNumber            String
+  plateCode              String?
+  governorate            String
+  wilayat                String
+  make                   String
+  model                  String
+  modelYear              Int?
+  color                  String?
+  vehicleClass           String?
+  bodyType               String?
+  fuelType               String?
+  chassisNumber          String?
+  engineNumber           String?
+  mulkiaNumber           String?
+  registeredOwner        String?
+  registrationIssueDate  DateTime?
+  registrationExpiryDate DateTime?
+  insuranceCompany       String?
+  insurancePolicyNumber  String?
+  insuranceExpiryDate    DateTime?
+  acquisitionDate        DateTime?
+  acquisitionCost        Decimal?          @db.Decimal(18, 2)
+  currentValue           Decimal?          @db.Decimal(18, 2)
+  currency               String            @default("OMR")
+  ownershipPct           Decimal           @default(100) @db.Decimal(5, 2)
+  status                 AssetStatus       @default(ACTIVE)
+  notes                  String?
+  entityId               String
+  entity                 Entity            @relation(fields: [entityId], references: [id])
+  assetId                String?           @unique
+  asset                  Asset?            @relation(fields: [assetId], references: [id])
+  documents              VehicleDocument[]
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  @@index([entityId, governorate, status])
+  @@index([plateNumber])
+}
+
+model VehicleDocument {
+  id           String              @id @default(cuid())
+  vehicleId    String
+  vehicle      Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  documentType VehicleDocumentType
+  label        String?
+  fileName     String
+  fileUrl      String
+  mimeType     String
+  fileSize     Int
+  uploadedById String?
+  createdAt    DateTime            @default(now())
+  @@index([vehicleId, documentType])
 }
 
 model PrivateEquityDetail {

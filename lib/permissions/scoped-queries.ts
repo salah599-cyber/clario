@@ -15,6 +15,14 @@ export function landEntityFilter(ctx: UserContext) {
   if (level === "FILTERED") return { entityId: { in: ctx.entityIds } };
   return { id: "__none__" };
 }
+
+export function carEntityFilter(ctx: UserContext) {
+  const level = getModulePermission(ctx, "CARS");
+  if (level === "FULL" || level === "READ") return {};
+  if (level === "FILTERED") return { entityId: { in: ctx.entityIds } };
+  return { id: "__none__" };
+}
+
 export function documentFilter(ctx: UserContext) {
   const level = getModulePermission(ctx, "DOCUMENTS");
   if (level === "FULL" || level === "READ") return {};
