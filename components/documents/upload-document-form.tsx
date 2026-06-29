@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { upload } from "@vercel/blob/client";
 import { saveDocumentMetadata } from "@/lib/actions/documents";
 import { DOCUMENT_CATEGORY_LABELS } from "@/lib/labels";
 import { MAX_UPLOAD_LABEL, validateUploadFileSize } from "@/lib/upload-limits";
@@ -65,17 +64,30 @@ export function UploadDocumentForm({ entities }: { entities: EntityOption[] }) {
       try {
         const pathname = "documents/" + Date.now() + "-" + sanitizeFileName(file.name);
 
-        const blob = await upload(pathname, file, {
-          access: "public",
-          handleUploadUrl: "/api/documents/upload",
-          multipart: file.size > 5 * 1024 * 1024,
+        const uploadData = new FormData();
+        uploadData.set("file", file);
+        uploadData.set("pathname", pathname);
+
+        const uploadRes = await fetch("/api/documents/upload", {
+          method: "POST",
+          body: uploadData,
+          credentials: "same-origin",
         });
+
+        const uploadBody = (await uploadRes.json().catch(() => ({}))) as {
+          url?: string;
+          error?: string;
+        };
+
+        if (!uploadRes.ok || !uploadBody.url) {
+          throw new Error(uploadBody.error ?? "Failed to upload file to storage.");
+        }
 
         const doc = await saveDocumentMetadata({
           name,
           category: category as DocumentCategory,
           fileName: file.name,
-          fileUrl: blob.url,
+          fileUrl: uploadBody.url,
           mimeType: file.type || "application/octet-stream",
           fileSize: file.size,
           expiryDate: expiryDateRaw || undefined,

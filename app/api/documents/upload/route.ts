@@ -1,40 +1,64 @@
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
-import { auth } from "@clerk/nextjs/server";
+import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
+import { canWrite, getCurrentUserContext } from "@/lib/permissions/access";
 import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
 
-const ALLOWED_CONTENT_TYPES = [
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-];
-
 export async function POST(request: Request): Promise<NextResponse> {
-  const body = (await request.json()) as HandleUploadBody;
-
-  if (body.type === "blob.generate-client-token") {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const ctx = await getCurrentUserContext();
+  if (!ctx) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!canWrite(ctx, "DOCUMENTS")) {
+    return NextResponse.json(
+      { error: "You do not have permission to upload documents." },
+      { status: 403 },
+    );
   }
 
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    return NextResponse.json(
+      {
+        error:
+          "BLOB_READ_WRITE_TOKEN is not configured. Add it in Vercel → Project → Settings → Environment Variables (Storage → Blob).",
+      },
+      { status: 503 },
+    );
+  }
+
+  let formData: FormData;
   try {
-    const jsonResponse = await handleUpload({
-      body,
-      request,
-      onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ALLOWED_CONTENT_TYPES,
-        maximumSizeInBytes: MAX_UPLOAD_BYTES,
-      }),
+    formData = await request.formData();
+  } catch {
+    return NextResponse.json({ error: "Invalid upload request." }, { status: 400 });
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return NextResponse.json({ error: "A file is required." }, { status: 400 });
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return NextResponse.json(
+      { error: "File is too large. Maximum size is 14 MB." },
+      { status: 413 },
+    );
+  }
+
+  const pathnameRaw = String(formData.get("pathname") ?? "").trim();
+  const pathname =
+    pathnameRaw ||
+    "documents/" + Date.now() + "-" + file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+  try {
+    const blob = await put(pathname, file, {
+      access: "public",
+      token,
+      contentType: file.type || undefined,
     });
 
-    return NextResponse.json(jsonResponse);
+    return NextResponse.json({ url: blob.url });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Upload failed";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
