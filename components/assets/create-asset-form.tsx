@@ -71,6 +71,8 @@ export function CreateAssetForm({ entities }: { entities: { id: string; name: st
             <Input id="name" name="name" required placeholder="Asset name" />
           </div>
 
+          <AssetAcquisitionFields />
+
           <div className="space-y-2">
             <Label>Category</Label>
             <Select value={category} onValueChange={setCategory}>
@@ -123,8 +125,6 @@ export function CreateAssetForm({ entities }: { entities: { id: string; name: st
               </SelectContent>
             </Select>
           </div>
-
-          <AssetAcquisitionFields />
 
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="description">Description</Label>
