@@ -16,6 +16,7 @@ import {
   Factory,
   HandCoins,
   Banknote,
+  Lightbulb,
 } from "lucide-react";
 import {
   Sidebar,
@@ -37,6 +38,7 @@ const platformNav = [
   { href: "/companies", label: "Companies", icon: Factory },
   { href: "/loans", label: "Loans", icon: HandCoins },
   { href: "/cheques", label: "Cheques", icon: Banknote },
+  { href: "/proposals", label: "Proposals", icon: Lightbulb },
   { href: "/assets/bank-details", label: "Bank Details", icon: Landmark },
   { href: "/documents", label: "Documents", icon: FileText },
   { href: "/expenses", label: "Expenses", icon: Receipt },

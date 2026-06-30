@@ -8,6 +8,7 @@ import {
   expenseEntityFilter,
   loanEntityFilter,
   chequeEntityFilter,
+  proposalEntityFilter,
   landEntityFilter,
 } from "@/lib/permissions/scoped-queries";
 import type { UserContext } from "@/lib/permissions/types";
@@ -58,6 +59,15 @@ export type DashboardRecentExit = {
   };
 };
 
+export type DashboardPendingProposal = {
+  id: string;
+  name: string;
+  suggestedAmount: { toString(): string };
+  currency: string;
+  submittedAt: Date | null;
+  submittedBy: { firstName: string | null; lastName: string | null; email: string };
+};
+
 export type DashboardSummary = {
   portfolioTotals: CurrencyTotal[];
   liabilityTotals: CurrencyTotal[];
@@ -68,6 +78,7 @@ export type DashboardSummary = {
   moduleSummaries: ModuleSummary[];
   reminders: DashboardReminder[];
   recentExits: DashboardRecentExit[];
+  pendingProposals: DashboardPendingProposal[];
 };
 
 const COUNTABLE_ASSET_STATUSES = ["ACTIVE", "MONITOR"] as const;
@@ -134,6 +145,7 @@ export async function getDashboardSummary(ctx: UserContext): Promise<DashboardSu
   const moduleSummaries: ModuleSummary[] = [];
   const reminders: DashboardReminder[] = [];
   let recentExits: DashboardRecentExit[] = [];
+  let pendingProposals: DashboardPendingProposal[] = [];
 
   let activeAssetCount = 0;
 
@@ -306,6 +318,38 @@ export async function getDashboardSummary(ctx: UserContext): Promise<DashboardSu
         severity: cheque.dueDate < now ? "danger" : "warning",
       });
     }
+  }
+
+  if (canAccess(ctx, "PROPOSALS")) {
+    const proposalCount = await db.investmentProposal.count({ where: proposalEntityFilter(ctx) });
+    const awaitingMyApproval = await db.investmentProposal.count({
+      where: {
+        ...proposalEntityFilter(ctx),
+        status: "PENDING",
+        approvers: { some: { userId: ctx.id, decision: null } },
+      },
+    });
+
+    moduleSummaries.push({
+      module: "PROPOSALS",
+      label: "Proposals",
+      href: "/proposals",
+      count: proposalCount,
+      detail: awaitingMyApproval > 0 ? awaitingMyApproval + " awaiting your approval" : undefined,
+    });
+
+    pendingProposals = await db.investmentProposal.findMany({
+      where: {
+        ...proposalEntityFilter(ctx),
+        status: "PENDING",
+        approvers: { some: { userId: ctx.id, decision: null } },
+      },
+      include: {
+        submittedBy: { select: { firstName: true, lastName: true, email: true } },
+      },
+      orderBy: { submittedAt: "desc" },
+      take: 8,
+    });
   }
 
   if (canAccess(ctx, "LANDS")) {
@@ -519,6 +563,7 @@ export async function getDashboardSummary(ctx: UserContext): Promise<DashboardSu
     moduleSummaries,
     reminders: reminders.slice(0, 12),
     recentExits,
+    pendingProposals,
   };
 }
 

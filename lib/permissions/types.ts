@@ -6,6 +6,7 @@ export type ModuleName =
   | "COMPANIES"
   | "LOANS"
   | "CHEQUES"
+  | "PROPOSALS"
   | "DOCUMENTS"
   | "EXPENSES"
   | "REPORTS"

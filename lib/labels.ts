@@ -191,3 +191,25 @@ export const CHEQUE_DOCUMENT_TYPE_LABELS: Record<string, string> = {
   BANK_CONFIRMATION: "Bank Confirmation",
   OTHER: "Other",
 };
+
+export const PROPOSAL_STATUS_LABELS: Record<string, string> = {
+  DRAFT: "Draft",
+  PENDING: "Pending Approval",
+  RETURNED: "Returned",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+};
+
+export const PROPOSAL_DECISION_LABELS: Record<string, string> = {
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+  RETURNED: "Returned",
+};
+
+export const PROPOSAL_COMMENT_KIND_LABELS: Record<string, string> = {
+  NOTE: "Note",
+  RETURN: "Return",
+  REJECT: "Reject",
+  APPROVE: "Approve",
+  RESUBMIT: "Resubmit",
+};

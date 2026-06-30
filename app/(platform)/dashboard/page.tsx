@@ -7,6 +7,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { getDashboardSummary, formatCurrencyTotals } from "@/lib/data/dashboard";
 import { requireModuleAccess } from "@/lib/permissions/access";
 import { EXIT_TYPE_LABELS } from "@/lib/labels";
+import { formatUserName } from "@/lib/proposals/users";
 import {
   ArrowRight,
   Building2,
@@ -19,6 +20,7 @@ import {
   Map,
   Receipt,
   Wallet,
+  Lightbulb,
 } from "lucide-react";
 
 const MODULE_ICONS: Record<string, typeof Building2> = {
@@ -30,6 +32,7 @@ const MODULE_ICONS: Record<string, typeof Building2> = {
   COMPANIES: Factory,
   LOANS: HandCoins,
   CHEQUES: Banknote,
+  PROPOSALS: Lightbulb,
   DOCUMENTS: FileText,
   EXPENSES: Receipt,
 };
@@ -203,6 +206,43 @@ export default async function DashboardPage() {
                       <span className="text-sm text-muted-foreground">{formatDate(exit.exitDate)}</span>
                       <Button variant="outline" size="sm" asChild>
                         <Link href={"/assets/" + exit.asset.id}>View</Link>
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {summary.pendingProposals.length > 0 ? (
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <div>
+                <CardTitle>Pending Proposal Approvals</CardTitle>
+                <CardDescription>Investment proposals awaiting your review</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/proposals?filter=pending-approval">View all</Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <ul className="divide-y">
+                {summary.pendingProposals.map((proposal) => (
+                  <li key={proposal.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                    <div>
+                      <p className="text-sm font-medium">{proposal.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        From {formatUserName(proposal.submittedBy)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium">
+                        {formatMoney(proposal.suggestedAmount, proposal.currency)}
+                      </span>
+                      <span className="text-sm text-muted-foreground">{formatDate(proposal.submittedAt)}</span>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={"/proposals/" + proposal.id}>Review</Link>
                       </Button>
                     </div>
                   </li>

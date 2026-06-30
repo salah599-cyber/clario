@@ -9,6 +9,7 @@ export const MANAGEABLE_MODULES: { module: ModuleName; label: string }[] = [
   { module: "COMPANIES", label: "Companies" },
   { module: "LOANS", label: "Loans" },
   { module: "CHEQUES", label: "Cheques" },
+  { module: "PROPOSALS", label: "Proposals" },
   { module: "DOCUMENTS", label: "Documents" },
   { module: "EXPENSES", label: "Expenses" },
   { module: "REPORTS", label: "Reports" },
