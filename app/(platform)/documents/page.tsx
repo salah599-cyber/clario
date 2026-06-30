@@ -3,9 +3,10 @@ import { UploadDocumentForm } from "@/components/documents/upload-document-form"
 import { RowActions } from "@/components/platform/row-actions";
 import { listDocuments } from "@/lib/data/documents";
 import { deleteDocument } from "@/lib/actions/documents";
+import { listDocumentCategories } from "@/lib/data/document-categories";
 import { listEntities } from "@/lib/data/entities";
-import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
-import { DOCUMENT_CATEGORY_LABELS, DOCUMENT_STATUS_LABELS } from "@/lib/labels";
+import { canWrite, getModulePermission, requireModuleAccess } from "@/lib/permissions/access";
+import { DOCUMENT_STATUS_LABELS } from "@/lib/labels";
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,14 +21,29 @@ import {
 
 export default async function DocumentsPage() {
   const ctx = await requireModuleAccess("DOCUMENTS");
-  const [documents, entities] = await Promise.all([listDocuments(ctx), listEntities()]);
+  const [documents, entities, allCategories] = await Promise.all([
+    listDocuments(ctx),
+    listEntities(),
+    listDocumentCategories(),
+  ]);
   const showUpload = canWrite(ctx, "DOCUMENTS");
+  const level = getModulePermission(ctx, "DOCUMENTS");
+  const uploadCategories =
+    level === "FILTERED"
+      ? allCategories.filter((category) => ctx.documentCategories.includes(category.id))
+      : allCategories;
 
   return (
     <>
       <PlatformHeader title="Document Vault" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-        {showUpload ? <UploadDocumentForm entities={entities} /> : null}
+        {showUpload ? (
+          <UploadDocumentForm
+            entities={entities}
+            categories={uploadCategories}
+            canAddCategory={showUpload}
+          />
+        ) : null}
 
         <Card>
           <CardHeader>
@@ -63,7 +79,7 @@ export default async function DocumentsPage() {
                           {doc.name}
                         </a>
                       </TableCell>
-                      <TableCell>{DOCUMENT_CATEGORY_LABELS[doc.category] ?? doc.category}</TableCell>
+                      <TableCell>{doc.category.name}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">
                           {DOCUMENT_STATUS_LABELS[doc.status] ?? doc.status}

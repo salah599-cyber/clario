@@ -59,7 +59,7 @@ export function documentFilter(ctx: UserContext) {
   if (level === "FULL" || level === "READ") return {};
   if (level === "FILTERED") {
     if (ctx.documentCategories.length === 0) return { id: "__none__" };
-    return { category: { in: ctx.documentCategories as never[] } };
+    return { categoryId: { in: ctx.documentCategories } };
   }
   if (level === "SHARED_ONLY") return { id: "__none__" };
   return { id: "__none__" };

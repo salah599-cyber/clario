@@ -152,16 +152,6 @@ enum PaymentFrequency {
   OTHER
 }
 
-enum DocumentCategory {
-  KYC
-  LEGAL
-  PROPERTY
-  CORPORATE
-  TAX
-  BANKING
-  OTHER
-}
-
 enum DocumentStatus {
   VALID
   EXPIRING_SOON
@@ -274,11 +264,12 @@ model UserEntityAccess {
 }
 
 model UserDocumentScope {
-  id       String           @id @default(cuid())
-  userId   String
-  category DocumentCategory
-  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@unique([userId, category])
+  id         String                 @id @default(cuid())
+  userId     String
+  categoryId String
+  category   DocumentCategoryRecord @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, categoryId])
 }
 
 model UserPermissionOverride {
@@ -853,27 +844,40 @@ model AssetCashFlow {
   createdAt   DateTime     @default(now())
 }
 
+model DocumentCategoryRecord {
+  id         String              @id @default(cuid())
+  name       String              @unique
+  isActive   Boolean             @default(true)
+  isSystem   Boolean             @default(false)
+  sortOrder  Int                 @default(0)
+  documents  Document[]
+  userScopes UserDocumentScope[]
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+}
+
 model Document {
-  id          String           @id @default(cuid())
+  id          String                 @id @default(cuid())
   name        String
   fileName    String
   fileUrl     String
   mimeType    String
   fileSize    Int
-  category    DocumentCategory
-  status      DocumentStatus   @default(VALID)
+  categoryId  String
+  category    DocumentCategoryRecord @relation(fields: [categoryId], references: [id])
+  status      DocumentStatus         @default(VALID)
   expiryDate  DateTime?
   entityId    String?
-  entity      Entity?          @relation(fields: [entityId], references: [id])
+  entity      Entity?                @relation(fields: [entityId], references: [id])
   assetId     String?
-  asset       Asset?           @relation(fields: [assetId], references: [id])
+  asset       Asset?                 @relation(fields: [assetId], references: [id])
   individual  String?
   tags        DocumentTag[]
   shares      DocumentShare[]
   auditEvents DocumentAudit[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  @@index([category, status, expiryDate])
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  @@index([categoryId, status, expiryDate])
 }
 
 model DocumentTag {

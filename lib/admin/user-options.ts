@@ -1,4 +1,4 @@
-import type { DocumentCategory, UserRole } from "@/lib/generated/prisma/client";
+import type { UserRole } from "@/lib/generated/prisma/client";
 import type { ModuleName } from "@/lib/permissions/types";
 
 export const MANAGEABLE_MODULES: { module: ModuleName; label: string }[] = [
@@ -25,21 +25,11 @@ export const USER_ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: "EXTERNAL", label: "External" },
 ];
 
-export const DOCUMENT_CATEGORY_OPTIONS: { value: DocumentCategory; label: string }[] = [
-  { value: "KYC", label: "KYC" },
-  { value: "LEGAL", label: "Legal" },
-  { value: "PROPERTY", label: "Property" },
-  { value: "CORPORATE", label: "Corporate" },
-  { value: "TAX", label: "Tax" },
-  { value: "BANKING", label: "Banking" },
-  { value: "OTHER", label: "Other" },
-];
-
 export type UserAccessInput = {
   email?: string;
   role: UserRole;
   isSuperAdmin: boolean;
   entityIds: string[];
   moduleOverrides: Partial<Record<ModuleName, import("@/lib/permissions/types").PermissionLevel>>;
-  documentCategories: DocumentCategory[];
+  documentCategories: string[];
 };

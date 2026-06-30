@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { applyUserAccess, type InviteConfig } from "@/lib/auth/apply-invite";
 import { logAudit } from "@/lib/audit/log";
 import { requireSuperAdmin } from "@/lib/permissions/access";
-import type { DocumentCategory, ModuleName, PermissionLevel, UserRole } from "@/lib/generated/prisma/client";
+import type { ModuleName, PermissionLevel, UserRole } from "@/lib/generated/prisma/client";
 import type { UserAccessInput } from "@/lib/admin/user-options";
 
 export type { UserAccessInput } from "@/lib/admin/user-options";
@@ -31,7 +31,7 @@ export async function listUsers() {
     include: {
       entityAccess: { include: { entity: true } },
       permissionOverrides: true,
-      documentScopes: true,
+      documentScopes: { include: { category: true } },
     },
     orderBy: [{ isSuperAdmin: "desc" }, { email: "asc" }],
   });

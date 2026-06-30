@@ -1,12 +1,13 @@
 import { db } from "@/lib/db";
-import type { DocumentCategory, ModuleName, PermissionLevel, UserRole } from "@/lib/generated/prisma/client";
+import { resolveDocumentCategoryIds } from "@/lib/data/document-categories";
+import type { ModuleName, PermissionLevel, UserRole } from "@/lib/generated/prisma/client";
 
 type InviteConfig = {
   role: UserRole;
   isSuperAdmin: boolean;
   entityIds: string[];
   moduleOverrides: Partial<Record<ModuleName, PermissionLevel>>;
-  documentCategories: DocumentCategory[];
+  documentCategories: string[];
 };
 
 function parseInviteConfig(invite: {
@@ -25,9 +26,13 @@ function parseInviteConfig(invite: {
         ? (invite.moduleOverrides as Partial<Record<ModuleName, PermissionLevel>>)
         : {},
     documentCategories: Array.isArray(invite.documentCategories)
-      ? (invite.documentCategories as DocumentCategory[])
+      ? (invite.documentCategories as string[])
       : [],
   };
+}
+
+async function scopeRows(userId: string, categoryIds: string[]) {
+  return categoryIds.map((categoryId) => ({ userId, categoryId }));
 }
 
 export async function applyPendingInvite(userId: string, email: string) {
@@ -37,6 +42,7 @@ export async function applyPendingInvite(userId: string, email: string) {
   if (!pending || pending.acceptedAt) return null;
 
   const config = parseInviteConfig(pending);
+  const categoryIds = await resolveDocumentCategoryIds(config.documentCategories);
 
   await db.$transaction(async (tx) => {
     await tx.user.update({
@@ -69,9 +75,9 @@ export async function applyPendingInvite(userId: string, email: string) {
     }
 
     await tx.userDocumentScope.deleteMany({ where: { userId } });
-    if (config.documentCategories.length > 0) {
+    if (categoryIds.length > 0) {
       await tx.userDocumentScope.createMany({
-        data: config.documentCategories.map((category) => ({ userId, category })),
+        data: await scopeRows(userId, categoryIds),
       });
     }
 
@@ -88,6 +94,8 @@ export async function applyUserAccess(
   userId: string,
   config: InviteConfig,
 ) {
+  const categoryIds = await resolveDocumentCategoryIds(config.documentCategories);
+
   await db.$transaction(async (tx) => {
     await tx.user.update({
       where: { id: userId },
@@ -119,9 +127,9 @@ export async function applyUserAccess(
     }
 
     await tx.userDocumentScope.deleteMany({ where: { userId } });
-    if (config.documentCategories.length > 0) {
+    if (categoryIds.length > 0) {
       await tx.userDocumentScope.createMany({
-        data: config.documentCategories.map((category) => ({ userId, category })),
+        data: await scopeRows(userId, categoryIds),
       });
     }
   });

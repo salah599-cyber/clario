@@ -1,34 +1,45 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveDocumentMetadata } from "@/lib/actions/documents";
-import { DOCUMENT_CATEGORY_LABELS } from "@/lib/labels";
 import { MAX_UPLOAD_LABEL, validateUploadFileSize } from "@/lib/upload-limits";
-import type { DocumentCategory } from "@/lib/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EntitySelect, type EntityOption } from "@/components/platform/entity-select";
+import {
+  DocumentCategorySelect,
+  type DocumentCategoryOption,
+} from "@/components/documents/document-category-select";
 
 function sanitizeFileName(name: string): string {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
-export function UploadDocumentForm({ entities }: { entities: EntityOption[] }) {
+export function UploadDocumentForm({
+  entities,
+  categories,
+  canAddCategory = true,
+}: {
+  entities: EntityOption[];
+  categories: DocumentCategoryOption[];
+  canAddCategory?: boolean;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [category, setCategory] = useState("CORPORATE");
+  const [categoryList, setCategoryList] = useState(categories);
+  const defaultCategoryId = useMemo(
+    () =>
+      categoryList.find((c) => c.name === "Corporate")?.id ??
+      categoryList[0]?.id ??
+      "",
+    [categoryList],
+  );
+  const [categoryId, setCategoryId] = useState(defaultCategoryId);
   const [entityId, setEntityId] = useState<string>("none");
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -58,6 +69,10 @@ export function UploadDocumentForm({ entities }: { entities: EntityOption[] }) {
       setError("Document name is required.");
       return;
     }
+    if (!categoryId) {
+      setError("Category is required.");
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -84,7 +99,7 @@ export function UploadDocumentForm({ entities }: { entities: EntityOption[] }) {
 
         const doc = await saveDocumentMetadata({
           name,
-          category: category as DocumentCategory,
+          categoryId,
           fileName: file.name,
           fileUrl: uploadBody.url,
           mimeType: file.type || "application/octet-stream",
@@ -134,18 +149,18 @@ export function UploadDocumentForm({ entities }: { entities: EntityOption[] }) {
 
           <div className="space-y-2">
             <Label>Category</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(DOCUMENT_CATEGORY_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <DocumentCategorySelect
+              categories={categoryList}
+              value={categoryId}
+              onValueChange={setCategoryId}
+              canAdd={canAddCategory}
+              onCategoryAdded={(category) => {
+                setCategoryList((current) => {
+                  if (current.some((item) => item.id === category.id)) return current;
+                  return [...current, category].sort((a, b) => a.name.localeCompare(b.name));
+                });
+              }}
+            />
           </div>
 
           <div className="space-y-2">

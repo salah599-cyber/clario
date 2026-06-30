@@ -12,10 +12,9 @@ import {
 import {
   MANAGEABLE_MODULES,
   USER_ROLE_OPTIONS,
-  DOCUMENT_CATEGORY_OPTIONS,
   type UserAccessInput,
 } from "@/lib/admin/user-options";
-import type { DocumentCategory, UserRole } from "@/lib/generated/prisma/client";
+import type { UserRole } from "@/lib/generated/prisma/client";
 import type { ModuleName, PermissionLevel } from "@/lib/permissions/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,6 +48,8 @@ import {
 import { formatDate } from "@/lib/format";
 import { AddEntityButton, type EntityOption } from "@/components/platform/entity-select";
 
+type DocumentCategoryOption = { id: string; name: string };
+
 type UserRow = {
   id: string;
   email: string;
@@ -60,7 +61,7 @@ type UserRow = {
   updatedAt: Date;
   entityAccess: { entityId: string; entity: { name: string } }[];
   permissionOverrides: { module: ModuleName; level: PermissionLevel }[];
-  documentScopes: { category: DocumentCategory }[];
+  documentScopes: { categoryId: string; category: { id: string; name: string } }[];
 };
 
 type PendingInviteRow = {
@@ -93,12 +94,14 @@ function UserAccessFields({
   value,
   onChange,
   entities,
+  documentCategories,
   onEntityAdded,
   showEmail,
 }: {
   value: UserAccessInput;
   onChange: (next: UserAccessInput) => void;
   entities: EntityOption[];
+  documentCategories: DocumentCategoryOption[];
   onEntityAdded?: (entity: EntityOption) => void;
   showEmail?: boolean;
 }) {
@@ -109,10 +112,10 @@ function UserAccessFields({
     onChange({ ...value, entityIds: next });
   }
 
-  function toggleDocumentCategory(category: DocumentCategory) {
-    const next = value.documentCategories.includes(category)
-      ? value.documentCategories.filter((c) => c !== category)
-      : [...value.documentCategories, category];
+  function toggleDocumentCategory(categoryId: string) {
+    const next = value.documentCategories.includes(categoryId)
+      ? value.documentCategories.filter((c) => c !== categoryId)
+      : [...value.documentCategories, categoryId];
     onChange({ ...value, documentCategories: next });
   }
 
@@ -225,14 +228,14 @@ function UserAccessFields({
       <div className="space-y-2">
         <Label>Document categories (for filtered document access)</Label>
         <div className="flex flex-wrap gap-2">
-          {DOCUMENT_CATEGORY_OPTIONS.map((option) => (
-            <label key={option.value} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+          {documentCategories.map((option) => (
+            <label key={option.id} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
               <input
                 type="checkbox"
-                checked={value.documentCategories.includes(option.value)}
-                onChange={() => toggleDocumentCategory(option.value)}
+                checked={value.documentCategories.includes(option.id)}
+                onChange={() => toggleDocumentCategory(option.id)}
               />
-              {option.label}
+              {option.name}
             </label>
           ))}
         </div>
@@ -251,7 +254,7 @@ function userToAccessInput(user: UserRow): UserAccessInput {
     isSuperAdmin: user.isSuperAdmin,
     entityIds: user.entityAccess.map((e) => e.entityId),
     moduleOverrides,
-    documentCategories: user.documentScopes.map((s) => s.category),
+    documentCategories: user.documentScopes.map((s) => s.categoryId),
   };
 }
 
@@ -259,10 +262,12 @@ export function UsersManagement({
   users,
   pendingInvites,
   entities,
+  documentCategories,
 }: {
   users: UserRow[];
   pendingInvites: PendingInviteRow[];
   entities: EntityOption[];
+  documentCategories: DocumentCategoryOption[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -346,6 +351,7 @@ export function UsersManagement({
                     value={inviteData}
                     onChange={setInviteData}
                     entities={entityList}
+                    documentCategories={documentCategories}
                     onEntityAdded={handleEntityAdded}
                     showEmail
                   />
@@ -517,6 +523,7 @@ export function UsersManagement({
                 value={editData}
                 onChange={setEditData}
                 entities={entityList}
+                documentCategories={documentCategories}
                 onEntityAdded={handleEntityAdded}
               />
             </div>

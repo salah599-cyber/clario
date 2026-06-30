@@ -31,7 +31,7 @@ export async function getCurrentUserContext(): Promise<UserContext | null> {
     role: user.role as UserContext["role"],
     isSuperAdmin: user.isSuperAdmin,
     entityIds: user.entityAccess.map((e) => e.entityId),
-    documentCategories: user.documentScopes.map((d) => d.category),
+    documentCategories: user.documentScopes.map((d) => d.categoryId),
     overrides,
   };
 }

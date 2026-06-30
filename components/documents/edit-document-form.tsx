@@ -3,14 +3,16 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateDocument, type UpdateDocumentInput } from "@/lib/actions/documents";
-import { DOCUMENT_CATEGORY_LABELS } from "@/lib/labels";
 import { formatDateInput } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EntitySelect } from "@/components/platform/entity-select";
+import {
+  DocumentCategorySelect,
+  type DocumentCategoryOption,
+} from "@/components/documents/document-category-select";
 
 type EntityOption = { id: string; name: string };
 
@@ -19,7 +21,7 @@ type DocumentRecord = {
   name: string;
   fileName: string;
   fileUrl: string;
-  category: string;
+  categoryId: string;
   expiryDate: Date | null;
   entityId: string | null;
 };
@@ -27,14 +29,19 @@ type DocumentRecord = {
 export function EditDocumentForm({
   document,
   entities,
+  categories,
+  canAddCategory = true,
 }: {
   document: DocumentRecord;
   entities: EntityOption[];
+  categories: DocumentCategoryOption[];
+  canAddCategory?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [category, setCategory] = useState(document.category);
+  const [categoryList, setCategoryList] = useState(categories);
+  const [categoryId, setCategoryId] = useState(document.categoryId);
   const [entityId, setEntityId] = useState(document.entityId ?? "none");
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -44,7 +51,7 @@ export function EditDocumentForm({
 
     const input: UpdateDocumentInput = {
       name: String(form.get("name") ?? ""),
-      category: category as UpdateDocumentInput["category"],
+      categoryId,
       expiryDate: String(form.get("expiryDate") ?? ""),
       entityId: entityId === "none" ? undefined : entityId,
     };
@@ -79,14 +86,18 @@ export function EditDocumentForm({
           </div>
           <div className="space-y-2">
             <Label>Category</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(DOCUMENT_CATEGORY_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <DocumentCategorySelect
+              categories={categoryList}
+              value={categoryId}
+              onValueChange={setCategoryId}
+              canAdd={canAddCategory}
+              onCategoryAdded={(category) => {
+                setCategoryList((current) => {
+                  if (current.some((item) => item.id === category.id)) return current;
+                  return [...current, category].sort((a, b) => a.name.localeCompare(b.name));
+                });
+              }}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="expiryDate">Expiry Date (optional)</Label>

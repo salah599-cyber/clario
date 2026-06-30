@@ -4,13 +4,13 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { deleteBlobUrl } from "@/lib/blob";
 import { logAudit } from "@/lib/audit/log";
+import { resolveDocumentCategoryId } from "@/lib/data/document-categories";
 import { canWrite, getModulePermission, requireModuleAccess } from "@/lib/permissions/access";
 import { documentFilter } from "@/lib/permissions/scoped-queries";
-import type { DocumentCategory } from "@/lib/generated/prisma/client";
 
 export type SaveDocumentMetadataInput = {
   name: string;
-  category: DocumentCategory;
+  categoryId: string;
   fileName: string;
   fileUrl: string;
   mimeType: string;
@@ -27,11 +27,13 @@ export async function saveDocumentMetadata(input: SaveDocumentMetadataInput) {
 
   const name = input.name.trim();
   if (!name) throw new Error("Document name is required.");
-  if (!input.category) throw new Error("Category is required.");
+  if (!input.categoryId) throw new Error("Category is required.");
   if (!input.fileUrl) throw new Error("File URL is required.");
 
+  const category = await resolveDocumentCategoryId(input.categoryId);
+
   const level = getModulePermission(ctx, "DOCUMENTS");
-  if (level === "FILTERED" && !ctx.documentCategories.includes(input.category)) {
+  if (level === "FILTERED" && !ctx.documentCategories.includes(category.id)) {
     throw new Error("You do not have permission to upload documents in this category.");
   }
 
@@ -53,7 +55,7 @@ export async function saveDocumentMetadata(input: SaveDocumentMetadataInput) {
       fileUrl: input.fileUrl,
       mimeType: input.mimeType || "application/octet-stream",
       fileSize: input.fileSize,
-      category: input.category,
+      categoryId: category.id,
       expiryDate: input.expiryDate ? new Date(input.expiryDate) : undefined,
       entityId,
     },
@@ -65,7 +67,7 @@ export async function saveDocumentMetadata(input: SaveDocumentMetadataInput) {
       action: "CREATE",
       resource: "Document",
       resourceId: document.id,
-      metadata: { name: document.name, category: document.category },
+      metadata: { name: document.name, categoryId: document.categoryId },
     });
   } catch {
     // Audit failure should not block a successful upload.
@@ -102,7 +104,7 @@ export async function deleteDocument(id: string) {
 
 export type UpdateDocumentInput = {
   name: string;
-  category: DocumentCategory;
+  categoryId: string;
   expiryDate?: string;
   entityId?: string;
 };
@@ -118,11 +120,18 @@ export async function updateDocument(id: string, input: UpdateDocumentInput) {
   });
   if (!document) throw new Error("Document not found.");
 
+  const category = await resolveDocumentCategoryId(input.categoryId);
+
+  const level = getModulePermission(ctx, "DOCUMENTS");
+  if (level === "FILTERED" && !ctx.documentCategories.includes(category.id)) {
+    throw new Error("You do not have permission to use this document category.");
+  }
+
   const updated = await db.document.update({
     where: { id },
     data: {
       name: input.name.trim(),
-      category: input.category,
+      categoryId: category.id,
       expiryDate: input.expiryDate ? new Date(input.expiryDate) : null,
       entityId: input.entityId || null,
     },
