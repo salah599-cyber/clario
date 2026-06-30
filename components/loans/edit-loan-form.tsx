@@ -15,8 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-type EntityOption = { id: string; name: string };
+import { EntitySelect, type EntityOption } from "@/components/platform/entity-select";
 type AssetOption = { id: string; name: string; entityId: string };
 
 type LoanRecord = {
@@ -133,14 +132,11 @@ export function EditLoanForm({
 
           <div className="space-y-2">
             <Label>Borrowing Entity</Label>
-            <Select value={entityId} onValueChange={(v) => { setEntityId(v); setAssetId("none"); }}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {entities.map((entity) => (
-                  <SelectItem key={entity.id} value={entity.id}>{entity.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <EntitySelect
+              entities={entities}
+              value={entityId}
+              onValueChange={(v) => { setEntityId(v); setAssetId("none"); }}
+            />
           </div>
 
           <div className="space-y-2">

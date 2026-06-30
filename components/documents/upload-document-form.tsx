@@ -17,8 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-type EntityOption = { id: string; name: string };
+import { EntitySelect, type EntityOption } from "@/components/platform/entity-select";
 
 function sanitizeFileName(name: string): string {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -156,19 +155,12 @@ export function UploadDocumentForm({ entities }: { entities: EntityOption[] }) {
 
           <div className="space-y-2 md:col-span-2">
             <Label>Entity (optional)</Label>
-            <Select value={entityId} onValueChange={setEntityId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select entity" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {entities.map((entity) => (
-                  <SelectItem key={entity.id} value={entity.id}>
-                    {entity.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <EntitySelect
+              entities={entities}
+              value={entityId}
+              onValueChange={setEntityId}
+              allowNone
+            />
           </div>
 
           {error ? (

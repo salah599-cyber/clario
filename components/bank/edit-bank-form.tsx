@@ -9,8 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-type EntityOption = { id: string; name: string };
+import { EntitySelect, type EntityOption } from "@/components/platform/entity-select";
 
 type BankRecord = {
   id: string;
@@ -82,13 +81,7 @@ export function EditBankForm({ account, entities }: { account: BankRecord; entit
           </div>
           <div className="space-y-2">
             <Label>Entity (optional)</Label>
-            <Select value={entityId} onValueChange={setEntityId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {entities.map((entity) => (<SelectItem key={entity.id} value={entity.id}>{entity.name}</SelectItem>))}
-              </SelectContent>
-            </Select>
+            <EntitySelect entities={entities} value={entityId} onValueChange={setEntityId} allowNone />
           </div>
           <div className="space-y-2 md:col-span-2"><Label htmlFor="notes">Notes</Label><Textarea id="notes" name="notes" rows={3} defaultValue={account.notes ?? ""} /></div>
           {error ? <p className="text-sm text-destructive md:col-span-2">{error}</p> : null}

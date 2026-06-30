@@ -11,8 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-type EntityOption = { id: string; name: string };
+import { EntitySelect } from "@/components/platform/entity-select";
 
 function FileSection({ id, name, label, description }: { id: string; name: string; label: string; description: string }) {
   return (
@@ -24,7 +23,7 @@ function FileSection({ id, name, label, description }: { id: string; name: strin
   );
 }
 
-export function CreateLandForm({ entities }: { entities: EntityOption[] }) {
+export function CreateLandForm({ entities }: { entities: { id: string; name: string }[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -108,12 +107,7 @@ export function CreateLandForm({ entities }: { entities: EntityOption[] }) {
           <div className="space-y-2"><Label htmlFor="coordinates">GPS Coordinates</Label><Input id="coordinates" name="coordinates" /></div>
           <div className="space-y-2">
             <Label>Entity</Label>
-            <Select value={entityId} onValueChange={setEntityId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {entities.map((entity) => (<SelectItem key={entity.id} value={entity.id}>{entity.name}</SelectItem>))}
-              </SelectContent>
-            </Select>
+            <EntitySelect entities={entities} value={entityId} onValueChange={setEntityId} />
           </div>
           <div className="space-y-2"><Label htmlFor="registeredHolder">Registered Holder</Label><Input id="registeredHolder" name="registeredHolder" /></div>
           <div className="space-y-2">

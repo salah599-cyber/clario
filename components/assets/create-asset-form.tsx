@@ -19,10 +19,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EntitySelect } from "@/components/platform/entity-select";
 
-type EntityOption = { id: string; name: string };
-
-export function CreateAssetForm({ entities }: { entities: EntityOption[] }) {
+export function CreateAssetForm({ entities }: { entities: { id: string; name: string }[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -88,18 +87,7 @@ export function CreateAssetForm({ entities }: { entities: EntityOption[] }) {
 
           <div className="space-y-2">
             <Label>Entity</Label>
-            <Select value={entityId} onValueChange={setEntityId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select entity" />
-              </SelectTrigger>
-              <SelectContent>
-                {entities.map((entity) => (
-                  <SelectItem key={entity.id} value={entity.id}>
-                    {entity.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <EntitySelect entities={entities} value={entityId} onValueChange={setEntityId} />
           </div>
 
           <div className="space-y-2">

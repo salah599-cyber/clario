@@ -13,8 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-type EntityOption = { id: string; name: string };
+import { EntitySelect } from "@/components/platform/entity-select";
 
 type CompanyRecord = {
   id: string;
@@ -42,7 +41,7 @@ type CompanyRecord = {
   }>;
 };
 
-export function EditCompanyForm({ company, entities }: { company: CompanyRecord; entities: EntityOption[] }) {
+export function EditCompanyForm({ company, entities }: { company: CompanyRecord; entities: { id: string; name: string }[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -95,14 +94,7 @@ export function EditCompanyForm({ company, entities }: { company: CompanyRecord;
 
           <div className="space-y-2">
             <Label>Entity</Label>
-            <Select value={entityId} onValueChange={setEntityId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {entities.map((entity) => (
-                  <SelectItem key={entity.id} value={entity.id}>{entity.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <EntitySelect entities={entities} value={entityId} onValueChange={setEntityId} />
           </div>
 
           <div className="space-y-2">

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EntitySelect } from "@/components/platform/entity-select";
 
 type EntityOption = { id: string; name: string };
 
@@ -93,15 +94,7 @@ export function EditDocumentForm({
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label>Entity (optional)</Label>
-            <Select value={entityId} onValueChange={setEntityId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {entities.map((entity) => (
-                  <SelectItem key={entity.id} value={entity.id}>{entity.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <EntitySelect entities={entities} value={entityId} onValueChange={setEntityId} allowNone />
           </div>
           {error ? <p className="text-sm text-destructive md:col-span-2">{error}</p> : null}
           <div className="flex gap-2 md:col-span-2">

@@ -47,8 +47,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/format";
-
-type EntityOption = { id: string; name: string };
+import { AddEntityButton, type EntityOption } from "@/components/platform/entity-select";
 
 type UserRow = {
   id: string;
@@ -94,11 +93,13 @@ function UserAccessFields({
   value,
   onChange,
   entities,
+  onEntityAdded,
   showEmail,
 }: {
   value: UserAccessInput;
   onChange: (next: UserAccessInput) => void;
   entities: EntityOption[];
+  onEntityAdded?: (entity: EntityOption) => void;
   showEmail?: boolean;
 }) {
   function toggleEntity(entityId: string) {
@@ -193,7 +194,20 @@ function UserAccessFields({
       </div>
 
       <div className="space-y-2">
-        <Label>Entity access (for filtered modules)</Label>
+        <div className="flex items-center justify-between gap-2">
+          <Label>Entity access (for filtered modules)</Label>
+          {onEntityAdded ? (
+            <AddEntityButton
+              label="Add entity"
+              onEntityAdded={(entity) => {
+                onEntityAdded(entity);
+                if (!value.entityIds.includes(entity.id)) {
+                  onChange({ ...value, entityIds: [...value.entityIds, entity.id] });
+                }
+              }}
+            />
+          ) : null}
+        </div>
         <div className="flex flex-wrap gap-2">
           {entities.map((entity) => (
             <label key={entity.id} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
@@ -253,6 +267,9 @@ export function UsersManagement({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [entityList, setEntityList] = useState(() =>
+    [...entities].sort((a, b) => a.name.localeCompare(b.name)),
+  );
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteData, setInviteData] = useState<UserAccessInput>(emptyAccess());
   const [editUser, setEditUser] = useState<UserRow | null>(null);
@@ -260,6 +277,13 @@ export function UsersManagement({
 
   const activeUsers = useMemo(() => users.filter((u) => u.isActive), [users]);
   const inactiveUsers = useMemo(() => users.filter((u) => !u.isActive), [users]);
+
+  function handleEntityAdded(entity: EntityOption) {
+    setEntityList((current) => {
+      if (current.some((item) => item.id === entity.id)) return current;
+      return [...current, entity].sort((a, b) => a.name.localeCompare(b.name));
+    });
+  }
 
   function handleInvite(e: React.FormEvent) {
     e.preventDefault();
@@ -321,7 +345,8 @@ export function UsersManagement({
                   <UserAccessFields
                     value={inviteData}
                     onChange={setInviteData}
-                    entities={entities}
+                    entities={entityList}
+                    onEntityAdded={handleEntityAdded}
                     showEmail
                   />
                 </div>
@@ -488,7 +513,12 @@ export function UsersManagement({
               <DialogDescription>{editUser?.email}</DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <UserAccessFields value={editData} onChange={setEditData} entities={entities} />
+              <UserAccessFields
+                value={editData}
+                onChange={setEditData}
+                entities={entityList}
+                onEntityAdded={handleEntityAdded}
+              />
             </div>
             {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
             <DialogFooter>

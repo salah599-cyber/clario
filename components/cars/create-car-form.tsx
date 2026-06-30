@@ -16,8 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-type EntityOption = { id: string; name: string };
+import { EntitySelect, type EntityOption } from "@/components/platform/entity-select";
 
 function FileSection({ id, name, label, description }: { id: string; name: string; label: string; description: string }) {
   return (
@@ -200,12 +199,7 @@ export function CreateCarForm({ entities }: { entities: EntityOption[] }) {
 
           <div className="space-y-2">
             <Label>Entity</Label>
-            <Select value={entityId} onValueChange={setEntityId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {entities.map((e) => (<SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>))}
-              </SelectContent>
-            </Select>
+            <EntitySelect entities={entities} value={entityId} onValueChange={setEntityId} />
           </div>
           <div className="space-y-2">
             <Label>Status</Label>

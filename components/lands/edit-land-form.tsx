@@ -12,8 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-type EntityOption = { id: string; name: string };
+import { EntitySelect } from "@/components/platform/entity-select";
 
 type LandRecord = {
   id: string;
@@ -38,7 +37,7 @@ type LandRecord = {
   notes: string | null;
 };
 
-export function EditLandForm({ land, entities }: { land: LandRecord; entities: EntityOption[] }) {
+export function EditLandForm({ land, entities }: { land: LandRecord; entities: { id: string; name: string }[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -123,12 +122,7 @@ export function EditLandForm({ land, entities }: { land: LandRecord; entities: E
           <div className="space-y-2"><Label htmlFor="coordinates">GPS Coordinates</Label><Input id="coordinates" name="coordinates" defaultValue={land.coordinates ?? ""} /></div>
           <div className="space-y-2">
             <Label>Entity</Label>
-            <Select value={entityId} onValueChange={setEntityId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {entities.map((entity) => (<SelectItem key={entity.id} value={entity.id}>{entity.name}</SelectItem>))}
-              </SelectContent>
-            </Select>
+            <EntitySelect entities={entities} value={entityId} onValueChange={setEntityId} />
           </div>
           <div className="space-y-2"><Label htmlFor="registeredHolder">Registered Holder</Label><Input id="registeredHolder" name="registeredHolder" defaultValue={land.registeredHolder ?? ""} /></div>
           <div className="space-y-2">
