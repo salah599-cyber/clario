@@ -7,6 +7,7 @@ import {
   documentFilter,
   expenseEntityFilter,
   loanEntityFilter,
+  chequeEntityFilter,
   landEntityFilter,
 } from "@/lib/permissions/scoped-queries";
 import type { UserContext } from "@/lib/permissions/types";
@@ -214,6 +215,57 @@ export async function getDashboardSummary(ctx: UserContext): Promise<DashboardSu
         date: loan.maturityDate,
         href: "/loans/" + loan.id,
         severity: loan.maturityDate < now ? "danger" : "warning",
+      });
+    }
+  }
+
+  if (canAccess(ctx, "CHEQUES")) {
+    const pendingChequeCount = await db.cheque.count({
+      where: {
+        ...chequeEntityFilter(ctx),
+        status: { in: ["PENDING", "DEPOSITED"] },
+      },
+    });
+
+    moduleSummaries.push({
+      module: "CHEQUES",
+      label: "Cheque Management",
+      href: "/cheques",
+      count: pendingChequeCount,
+      detail: pendingChequeCount > 0 ? "Pending cheques" : undefined,
+    });
+
+    const cheques = await db.cheque.findMany({
+      where: {
+        ...chequeEntityFilter(ctx),
+        status: { in: ["PENDING", "DEPOSITED"] },
+        dueDate: { not: null },
+      },
+      select: {
+        id: true,
+        chequeNumber: true,
+        payee: true,
+        dueDate: true,
+        direction: true,
+      },
+    });
+
+    const now = new Date();
+    const horizon = new Date(now);
+    horizon.setDate(horizon.getDate() + 7);
+
+    for (const cheque of cheques) {
+      if (!cheque.dueDate) continue;
+      if (cheque.dueDate > horizon) continue;
+
+      reminders.push({
+        id: cheque.id + "-due",
+        kind: "document",
+        title: "Cheque #" + cheque.chequeNumber,
+        subtitle: (cheque.direction === "ISSUED" ? "Due · " : "Incoming · ") + cheque.payee,
+        date: cheque.dueDate,
+        href: "/cheques/" + cheque.id,
+        severity: cheque.dueDate < now ? "danger" : "warning",
       });
     }
   }

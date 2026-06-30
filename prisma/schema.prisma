@@ -30,6 +30,7 @@ enum ModuleName {
   CARS
   COMPANIES
   LOANS
+  CHEQUES
   DOCUMENTS
   EXPENSES
   REPORTS
@@ -104,6 +105,27 @@ enum LoanDocumentType {
   LOAN_AGREEMENT
   PAYMENT_SCHEDULE
   STATEMENT
+  OTHER
+}
+
+enum ChequeDirection {
+  ISSUED
+  RECEIVED
+}
+
+enum ChequeStatus {
+  PENDING
+  DEPOSITED
+  CLEARED
+  BOUNCED
+  CANCELLED
+  STOPPED
+}
+
+enum ChequeDocumentType {
+  CHEQUE_COPY
+  DEPOSIT_SLIP
+  BANK_CONFIRMATION
   OTHER
 }
 
@@ -221,6 +243,7 @@ model Entity {
   landParcels  LandParcel[]
   vehicles     Vehicle[]
   registeredCompanies RegisteredCompany[]
+  cheques      Cheque[]
   userAccess   UserEntityAccess[]
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
@@ -566,6 +589,7 @@ model BankAccount {
   iban          String?
   currency      String   @default("OMR")
   notes         String?
+  cheques       Cheque[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -615,6 +639,50 @@ model LoanDocument {
   createdAt    DateTime         @default(now())
 
   @@index([liabilityId, documentType])
+}
+
+model Cheque {
+  id              String          @id @default(cuid())
+  direction       ChequeDirection
+  status          ChequeStatus    @default(PENDING)
+  chequeNumber    String
+  amount          Decimal         @db.Decimal(18, 2)
+  currency        String          @default("OMR")
+  payee           String
+  issueDate       DateTime
+  dueDate         DateTime?
+  clearanceDate   DateTime?
+  bankName        String?
+  purpose         String?
+  notes           String?
+  entityId        String
+  entity          Entity          @relation(fields: [entityId], references: [id])
+  bankAccountId   String?
+  bankAccount     BankAccount?    @relation(fields: [bankAccountId], references: [id])
+  documents       ChequeDocument[]
+  deletedAt       DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([entityId, status, direction])
+  @@index([dueDate])
+  @@index([deletedAt])
+}
+
+model ChequeDocument {
+  id           String             @id @default(cuid())
+  chequeId     String
+  cheque       Cheque             @relation(fields: [chequeId], references: [id], onDelete: Cascade)
+  documentType ChequeDocumentType
+  label        String?
+  fileName     String
+  fileUrl      String
+  mimeType     String
+  fileSize     Int
+  uploadedById String?
+  createdAt    DateTime           @default(now())
+
+  @@index([chequeId, documentType])
 }
 
 model AssetValuation {

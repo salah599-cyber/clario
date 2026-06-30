@@ -146,3 +146,24 @@ export const LOAN_DOCUMENT_TYPE_LABELS: Record<string, string> = {
   STATEMENT: "Statement",
   OTHER: "Other",
 };
+
+export const CHEQUE_DIRECTION_LABELS: Record<string, string> = {
+  ISSUED: "Issued (outgoing)",
+  RECEIVED: "Received (incoming)",
+};
+
+export const CHEQUE_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Pending",
+  DEPOSITED: "Deposited",
+  CLEARED: "Cleared",
+  BOUNCED: "Bounced",
+  CANCELLED: "Cancelled",
+  STOPPED: "Stop Payment",
+};
+
+export const CHEQUE_DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  CHEQUE_COPY: "Cheque Copy",
+  DEPOSIT_SLIP: "Deposit Slip",
+  BANK_CONFIRMATION: "Bank Confirmation",
+  OTHER: "Other",
+};

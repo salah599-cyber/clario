@@ -37,6 +37,14 @@ export function loanEntityFilter(ctx: UserContext) {
   return { id: "__none__" };
 }
 
+export function chequeEntityFilter(ctx: UserContext) {
+  const level = getModulePermission(ctx, "CHEQUES");
+  const notDeleted = { deletedAt: null };
+  if (level === "FULL" || level === "READ") return notDeleted;
+  if (level === "FILTERED") return { ...notDeleted, entityId: { in: ctx.entityIds } };
+  return { id: "__none__" };
+}
+
 export function documentFilter(ctx: UserContext) {
   const level = getModulePermission(ctx, "DOCUMENTS");
   if (level === "FULL" || level === "READ") return {};

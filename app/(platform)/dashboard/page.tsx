@@ -12,6 +12,7 @@ import {
   Car,
   Factory,
   HandCoins,
+  Banknote,
   FileText,
   Landmark,
   Map,
@@ -27,6 +28,7 @@ const MODULE_ICONS: Record<string, typeof Building2> = {
   CARS: Car,
   COMPANIES: Factory,
   LOANS: HandCoins,
+  CHEQUES: Banknote,
   DOCUMENTS: FileText,
   EXPENSES: Receipt,
 };

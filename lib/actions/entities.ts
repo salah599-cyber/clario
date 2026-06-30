@@ -12,6 +12,7 @@ const ENTITY_WRITE_MODULES: ModuleName[] = [
   "CARS",
   "COMPANIES",
   "LOANS",
+  "CHEQUES",
   "EXPENSES",
   "DOCUMENTS",
 ];
