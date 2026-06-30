@@ -14,6 +14,7 @@ export type CreateAssetInput = {
   entityId: string;
   status: AssetStatus;
   currency: string;
+  acquisitionDate?: string;
   acquisitionCost?: string;
   currentValue?: string;
   description?: string;
@@ -45,6 +46,14 @@ function parseDecimal(value?: string) {
   return value.trim();
 }
 
+function parseDate(value?: string | null) {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  const date = new Date(trimmed);
+  if (Number.isNaN(date.getTime())) throw new Error("Invalid date.");
+  return date;
+}
+
 export async function createAsset(input: CreateAssetInput) {
   const ctx = await requireModuleAccess("ASSETS");
   if (!canWrite(ctx, "ASSETS")) {
@@ -67,6 +76,7 @@ export async function createAsset(input: CreateAssetInput) {
       entityId: input.entityId,
       status: input.status,
       currency: input.currency || "OMR",
+      acquisitionDate: parseDate(input.acquisitionDate),
       acquisitionCost: parseDecimal(input.acquisitionCost),
       currentValue: parseDecimal(input.currentValue),
       description: input.description?.trim() || undefined,
@@ -197,6 +207,7 @@ export async function updateAsset(id: string, input: CreateAssetInput) {
       entityId: input.entityId,
       status: input.status,
       currency: input.currency || "OMR",
+      acquisitionDate: parseDate(input.acquisitionDate),
       acquisitionCost: parseDecimal(input.acquisitionCost),
       currentValue,
       description: input.description?.trim() || undefined,

@@ -85,6 +85,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
                   </Badge>
                 }
               />
+              <Detail label="Acquisition Date" value={formatDate(asset.acquisitionDate)} />
               <Detail label="Acquisition Cost" value={formatMoney(asset.acquisitionCost, asset.currency)} />
               <Detail label="Current Value" value={formatMoney(asset.currentValue, asset.currency)} />
               <Detail label="Value Updated" value={formatDate(asset.valueUpdatedAt)} />

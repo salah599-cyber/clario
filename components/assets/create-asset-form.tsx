@@ -43,6 +43,7 @@ export function CreateAssetForm({ entities }: { entities: { id: string; name: st
           entityId: entityId || String(form.get("entityId") ?? ""),
           status: status as never,
           currency,
+          acquisitionDate: String(form.get("acquisitionDate") ?? ""),
           acquisitionCost: String(form.get("acquisitionCost") ?? ""),
           currentValue: String(form.get("currentValue") ?? ""),
           description: String(form.get("description") ?? ""),
@@ -120,6 +121,11 @@ export function CreateAssetForm({ entities }: { entities: { id: string; name: st
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="acquisitionDate">Acquisition Date</Label>
+            <Input id="acquisitionDate" name="acquisitionDate" type="date" />
           </div>
 
           <div className="space-y-2">

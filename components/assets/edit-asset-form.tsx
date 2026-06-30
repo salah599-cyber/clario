@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateAsset, type CreateAssetInput } from "@/lib/actions/assets";
 import { ASSET_CATEGORY_LABELS, EDITABLE_ASSET_STATUS_ENTRIES } from "@/lib/labels";
-import { formatDecimalInput } from "@/lib/format";
+import { formatDecimalInput, formatDateInput } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,7 @@ type AssetRecord = {
   status: string;
   entityId: string;
   currency: string;
+  acquisitionDate: Date | null;
   acquisitionCost: { toString(): string } | null;
   currentValue: { toString(): string } | null;
   description: string | null;
@@ -58,6 +59,7 @@ export function EditAssetForm({
       entityId: entityId || String(form.get("entityId") ?? ""),
       status: status as CreateAssetInput["status"],
       currency,
+      acquisitionDate: String(form.get("acquisitionDate") ?? ""),
       acquisitionCost: String(form.get("acquisitionCost") ?? ""),
       currentValue: String(form.get("currentValue") ?? ""),
       description: String(form.get("description") ?? ""),
@@ -128,6 +130,16 @@ export function EditAssetForm({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="acquisitionDate">Acquisition Date</Label>
+            <Input
+              id="acquisitionDate"
+              name="acquisitionDate"
+              type="date"
+              defaultValue={formatDateInput(asset.acquisitionDate)}
+            />
           </div>
 
           <div className="space-y-2">
