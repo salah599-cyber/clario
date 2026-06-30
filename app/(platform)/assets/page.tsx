@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { PlatformHeader } from "@/components/platform/platform-header";
 import { AddLinkButton } from "@/components/platform/add-link-button";
 import { RowActions } from "@/components/platform/row-actions";
+import { AssetsFilterTabs, type AssetsFilter } from "@/components/assets/assets-filter-tabs";
 import { listAssets, deleteAsset } from "@/lib/actions/assets";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
 import { ASSET_CATEGORY_LABELS, ASSET_STATUS_LABELS } from "@/lib/labels";
@@ -16,9 +18,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-export default async function AssetsPage() {
+function parseFilter(value?: string): AssetsFilter {
+  if (value === "active" || value === "exited") return value;
+  return "all";
+}
+
+export default async function AssetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const { filter: filterParam } = await searchParams;
+  const filter = parseFilter(filterParam);
   const ctx = await requireModuleAccess("ASSETS");
-  const assets = await listAssets();
+  const assets = await listAssets(filter);
   const showAdd = canWrite(ctx, "ASSETS");
 
   return (
@@ -27,17 +40,22 @@ export default async function AssetsPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">
         <Card>
           <CardHeader className="flex flex-row items-start justify-between gap-4">
-            <div>
-              <CardTitle>Assets</CardTitle>
-              <CardDescription>
-                Manage real estate, private equity, public markets, and more.
-              </CardDescription>
+            <div className="space-y-3">
+              <div>
+                <CardTitle>Assets</CardTitle>
+                <CardDescription>
+                  Manage real estate, private equity, public markets, and more.
+                </CardDescription>
+              </div>
+              <AssetsFilterTabs current={filter} />
             </div>
             {showAdd ? <AddLinkButton href="/assets/new" label="Add Asset" /> : null}
           </CardHeader>
           <CardContent>
             {assets.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No assets yet.</p>
+              <p className="text-sm text-muted-foreground">
+                {filter === "exited" ? "No exited assets." : filter === "active" ? "No active assets." : "No assets yet."}
+              </p>
             ) : (
               <Table>
                 <TableHeader>
@@ -57,43 +75,53 @@ export default async function AssetsPage() {
                       ? "Lands"
                       : asset.vehicle
                         ? "Cars"
-                        : null;
+                        : asset.registeredCompany
+                          ? "Companies"
+                          : null;
 
                     return (
-                    <TableRow key={asset.id}>
-                      <TableCell className="font-medium">{asset.name}</TableCell>
-                      <TableCell>{ASSET_CATEGORY_LABELS[asset.category] ?? asset.category}</TableCell>
-                      <TableCell>{asset.entity.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {ASSET_STATUS_LABELS[asset.status] ?? asset.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatMoney(asset.currentValue, asset.currency)}
-                      </TableCell>
-                      <TableCell>{formatDate(asset.updatedAt)}</TableCell>
-                      {showAdd ? (
-                        <TableCell>
-                          <RowActions
-                            editHref={linkedModule ? undefined : "/assets/" + asset.id + "/edit"}
-                            itemId={asset.id}
-                            itemLabel={asset.name}
-                            deleteAction={deleteAsset}
-                            disableDelete={!!linkedModule}
-                            disabledReason={
-                              linkedModule
-                                ? "Linked to a " +
-                                  (asset.landParcel ? "land parcel" : "vehicle") +
-                                  ". Manage from " +
-                                  linkedModule +
-                                  " instead."
-                                : undefined
-                            }
-                          />
+                      <TableRow key={asset.id}>
+                        <TableCell className="font-medium">
+                          <Link href={"/assets/" + asset.id} className="hover:underline">
+                            {asset.name}
+                          </Link>
                         </TableCell>
-                      ) : null}
-                    </TableRow>
+                        <TableCell>{ASSET_CATEGORY_LABELS[asset.category] ?? asset.category}</TableCell>
+                        <TableCell>{asset.entity.name}</TableCell>
+                        <TableCell>
+                          <Badge variant={asset.status === "EXITED" ? "outline" : "secondary"}>
+                            {ASSET_STATUS_LABELS[asset.status] ?? asset.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatMoney(asset.currentValue, asset.currency)}
+                        </TableCell>
+                        <TableCell>{formatDate(asset.updatedAt)}</TableCell>
+                        {showAdd ? (
+                          <TableCell>
+                            <RowActions
+                              editHref={linkedModule ? undefined : "/assets/" + asset.id + "/edit"}
+                              itemId={asset.id}
+                              itemLabel={asset.name}
+                              deleteAction={deleteAsset}
+                              disableDelete={!!linkedModule}
+                              disabledReason={
+                                linkedModule
+                                  ? "Linked to a " +
+                                    (asset.landParcel
+                                      ? "land parcel"
+                                      : asset.vehicle
+                                        ? "vehicle"
+                                        : "company") +
+                                    ". Manage from " +
+                                    linkedModule +
+                                    " instead."
+                                  : undefined
+                              }
+                            />
+                          </TableCell>
+                        ) : null}
+                      </TableRow>
                     );
                   })}
                 </TableBody>

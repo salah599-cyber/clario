@@ -4,10 +4,12 @@ import { PlatformHeader } from "@/components/platform/platform-header";
 import { DeleteEntryButton } from "@/components/platform/delete-entry-button";
 import { EditLinkButton } from "@/components/platform/edit-link-button";
 import { UploadCompanyDocumentsForm } from "@/components/companies/upload-company-documents-form";
+import { AssetExitSummary } from "@/components/assets/asset-exit-summary";
+import { RecordAssetExitForm } from "@/components/assets/record-asset-exit-form";
 import { getCompany, deleteCompany, deleteCompanyDocument } from "@/lib/actions/companies";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
 import { ASSET_STATUS_LABELS, COMPANY_DOCUMENT_TYPE_LABELS } from "@/lib/labels";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDecimalInput } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +38,7 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
           </Button>
           {company.assetId ? (
             <Button variant="outline" size="sm" asChild>
-              <Link href="/assets">View in Assets</Link>
+              <Link href={"/assets/" + company.assetId}>View in Assets</Link>
             </Button>
           ) : null}
           {showUpload ? (
@@ -74,6 +76,20 @@ export default async function CompanyDetailPage({ params }: { params: Promise<{ 
           </Card>
           {showUpload ? <UploadCompanyDocumentsForm companyId={company.id} /> : null}
         </div>
+
+        {showUpload && company.assetId && company.status !== "EXITED" && !company.asset?.exit ? (
+          <RecordAssetExitForm
+            assetId={company.assetId}
+            assetName={company.name}
+            currency={company.asset?.currency ?? "OMR"}
+            acquisitionCost={formatDecimalInput(company.asset?.acquisitionCost)}
+            redirectTo={"/companies/" + company.id}
+          />
+        ) : null}
+
+        {company.asset?.exit && company.assetId ? (
+          <AssetExitSummary exit={company.asset.exit} assetId={company.assetId} showActions={showUpload} />
+        ) : null}
 
         <Card>
           <CardHeader>

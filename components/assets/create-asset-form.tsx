@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createAsset } from "@/lib/actions/assets";
 import {
   ASSET_CATEGORY_LABELS,
-  ASSET_STATUS_LABELS,
+  EDITABLE_ASSET_STATUS_ENTRIES,
 } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,7 +97,7 @@ export function CreateAssetForm({ entities }: { entities: { id: string; name: st
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(ASSET_STATUS_LABELS).map(([value, label]) => (
+                {EDITABLE_ASSET_STATUS_ENTRIES.map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
                   </SelectItem>

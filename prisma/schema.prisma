@@ -179,6 +179,21 @@ enum CashFlowType {
   OUTFLOW
 }
 
+enum ExitType {
+  SALE
+  TRANSFER
+  LIQUIDATION
+  WRITE_OFF
+  OTHER
+}
+
+enum AssetExitDocumentType {
+  SALE_AGREEMENT
+  TRANSFER_DEED
+  CLOSING_STATEMENT
+  OTHER
+}
+
 model User {
   id                  String                   @id @default(cuid())
   clerkId             String                   @unique
@@ -271,6 +286,7 @@ model Asset {
   description     String?
   category        AssetCategory
   status          AssetStatus           @default(ACTIVE)
+  exitedAt        DateTime?
   acquisitionDate DateTime?
   acquisitionCost Decimal?              @db.Decimal(18, 2)
   currentValue    Decimal?              @db.Decimal(18, 2)
@@ -298,6 +314,7 @@ model Asset {
   landParcel      LandParcel?
   vehicle         Vehicle?
   registeredCompany RegisteredCompany?
+  exit            AssetExit?
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
   @@index([entityId, category, status])
@@ -376,6 +393,7 @@ model LandSale {
   notes        String?
   recordedById String?
   documents    LandSaleDocument[]
+  assetExit    AssetExit?
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 }
@@ -705,6 +723,45 @@ model AssetValuation {
   notes     String?
   createdAt DateTime @default(now())
   @@index([assetId, valuedAt])
+}
+
+model AssetExit {
+  id              String              @id @default(cuid())
+  assetId         String              @unique
+  asset           Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  exitType        ExitType            @default(SALE)
+  exitDate        DateTime
+  proceeds        Decimal?            @db.Decimal(18, 2)
+  currency        String              @default("OMR")
+  counterparty    String?
+  acquisitionCost Decimal?            @db.Decimal(18, 2)
+  realizedGain    Decimal?            @db.Decimal(18, 2)
+  recordCashInflow Boolean            @default(false)
+  notes           String?
+  recordedById    String?
+  landSaleId      String?             @unique
+  landSale        LandSale?           @relation(fields: [landSaleId], references: [id])
+  documents       AssetExitDocument[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([exitDate])
+}
+
+model AssetExitDocument {
+  id           String                @id @default(cuid())
+  assetExitId  String
+  assetExit    AssetExit             @relation(fields: [assetExitId], references: [id], onDelete: Cascade)
+  documentType AssetExitDocumentType
+  label        String?
+  fileName     String
+  fileUrl      String
+  mimeType     String
+  fileSize     Int
+  uploadedById String?
+  createdAt    DateTime              @default(now())
+
+  @@index([assetExitId, documentType])
 }
 
 model AssetCashFlow {

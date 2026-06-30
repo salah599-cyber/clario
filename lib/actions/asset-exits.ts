@@ -1,0 +1,372 @@
+"use server";
+
+import { put } from "@vercel/blob";
+import { revalidatePath } from "next/cache";
+import { db } from "@/lib/db";
+import { deleteBlobUrl } from "@/lib/blob";
+import { logAudit } from "@/lib/audit/log";
+import { canWrite, requireModuleAccess, requireUserContext } from "@/lib/permissions/access";
+import { assetEntityFilter } from "@/lib/permissions/scoped-queries";
+import type { AssetExitDocumentType, ExitType } from "@/lib/generated/prisma/client";
+
+function parseDecimal(value?: string | null) {
+  if (!value || value.trim() === "") return undefined;
+  return value.trim();
+}
+
+function parseDate(value?: string | null) {
+  if (!value || value.trim() === "") return undefined;
+  return new Date(value);
+}
+
+function sanitizeFileName(name: string) {
+  return name.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+function getFilesFromFormData(formData: FormData, field: string): File[] {
+  return formData
+    .getAll(field)
+    .filter((item): item is File => item instanceof File && item.size > 0);
+}
+
+function computeRealizedGain(proceeds?: string, acquisitionCost?: string | null) {
+  if (!proceeds || !acquisitionCost) return undefined;
+  const gain = parseFloat(proceeds) - parseFloat(acquisitionCost);
+  if (Number.isNaN(gain)) return undefined;
+  return gain.toFixed(2);
+}
+
+async function canRecordExitForAsset(
+  ctx: Awaited<ReturnType<typeof requireUserContext>>,
+  asset: {
+    entityId: string;
+    landParcel: { id: string } | null;
+    vehicle: { id: string } | null;
+    registeredCompany: { id: string } | null;
+  },
+) {
+  if (canWrite(ctx, "ASSETS")) return true;
+  if (asset.landParcel && canWrite(ctx, "LANDS")) return true;
+  if (asset.vehicle && canWrite(ctx, "CARS")) return true;
+  if (asset.registeredCompany && canWrite(ctx, "COMPANIES")) return true;
+  return false;
+}
+
+async function syncLinkedModuleStatus(assetId: string, status: "EXITED") {
+  const asset = await db.asset.findUnique({
+    where: { id: assetId },
+    select: {
+      landParcel: { select: { id: true } },
+      vehicle: { select: { id: true } },
+      registeredCompany: { select: { id: true } },
+    },
+  });
+  if (!asset) return;
+
+  if (asset.landParcel) {
+    await db.landParcel.update({ where: { id: asset.landParcel.id }, data: { status } });
+  }
+  if (asset.vehicle) {
+    await db.vehicle.update({ where: { id: asset.vehicle.id }, data: { status } });
+  }
+  if (asset.registeredCompany) {
+    await db.registeredCompany.update({ where: { id: asset.registeredCompany.id }, data: { status } });
+  }
+}
+
+export async function createAssetExitRecord(input: {
+  assetId: string;
+  exitType: ExitType;
+  exitDate: Date;
+  proceeds?: string;
+  currency: string;
+  counterparty?: string;
+  notes?: string;
+  recordedById: string;
+  landSaleId?: string;
+  recordCashInflow?: boolean;
+}) {
+  const asset = await db.asset.findUnique({
+    where: { id: input.assetId },
+    include: { exit: true },
+  });
+  if (!asset) throw new Error("Asset not found.");
+  if (asset.exit || asset.status === "EXITED") {
+    throw new Error("This asset has already been exited.");
+  }
+
+  const acquisitionCost = asset.acquisitionCost?.toString() ?? undefined;
+  const realizedGain = computeRealizedGain(input.proceeds, acquisitionCost);
+
+  const exit = await db.assetExit.create({
+    data: {
+      assetId: input.assetId,
+      exitType: input.exitType,
+      exitDate: input.exitDate,
+      proceeds: input.proceeds,
+      currency: input.currency,
+      counterparty: input.counterparty,
+      acquisitionCost,
+      realizedGain,
+      recordCashInflow: input.recordCashInflow ?? false,
+      notes: input.notes,
+      recordedById: input.recordedById,
+      landSaleId: input.landSaleId,
+    },
+  });
+
+  await db.asset.update({
+    where: { id: input.assetId },
+    data: {
+      status: "EXITED",
+      exitedAt: input.exitDate,
+      currentValue: null,
+      valueUpdatedAt: null,
+    },
+  });
+
+  await syncLinkedModuleStatus(input.assetId, "EXITED");
+
+  if (input.recordCashInflow && input.proceeds) {
+    await db.assetCashFlow.create({
+      data: {
+        assetId: input.assetId,
+        type: "INFLOW",
+        amount: input.proceeds,
+        currency: input.currency,
+        occurredAt: input.exitDate,
+        description: "Exit proceeds",
+      },
+    });
+  }
+
+  return exit;
+}
+
+async function uploadExitFiles(
+  assetExitId: string,
+  assetId: string,
+  files: File[],
+  documentType: AssetExitDocumentType,
+  uploadedById: string,
+) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    throw new Error(
+      "BLOB_READ_WRITE_TOKEN is not configured. Document uploads require Vercel Blob storage.",
+    );
+  }
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (!(file instanceof File) || file.size === 0) continue;
+
+    const pathname =
+      "asset-exits/" +
+      assetId +
+      "/" +
+      documentType.toLowerCase() +
+      "/" +
+      Date.now() +
+      "-" +
+      i +
+      "-" +
+      sanitizeFileName(file.name);
+
+    const blob = await put(pathname, file, {
+      access: "public",
+      token,
+      contentType: file.type || undefined,
+    });
+
+    await db.assetExitDocument.create({
+      data: {
+        assetExitId,
+        documentType,
+        label: file.name,
+        fileName: file.name,
+        fileUrl: blob.url,
+        mimeType: file.type || "application/octet-stream",
+        fileSize: file.size,
+        uploadedById,
+      },
+    });
+  }
+}
+
+export async function recordAssetExit(formData: FormData) {
+  const ctx = await requireUserContext();
+
+  const assetId = String(formData.get("assetId") ?? "").trim();
+  const exitType = String(formData.get("exitType") ?? "SALE") as ExitType;
+  const exitDateRaw = String(formData.get("exitDate") ?? "").trim();
+  const proceeds = parseDecimal(String(formData.get("proceeds") ?? ""));
+  const currency = String(formData.get("currency") ?? "OMR").trim() || "OMR";
+  const counterparty = String(formData.get("counterparty") ?? "").trim() || undefined;
+  const notes = String(formData.get("notes") ?? "").trim() || undefined;
+  const recordCashInflow = String(formData.get("recordCashInflow") ?? "") === "on";
+
+  if (!assetId) throw new Error("Asset is required.");
+  if (!exitDateRaw) throw new Error("Exit date is required.");
+
+  const exitDate = parseDate(exitDateRaw);
+  if (!exitDate) throw new Error("Exit date is invalid.");
+
+  if ((exitType === "SALE" || exitType === "LIQUIDATION") && !proceeds) {
+    throw new Error("Proceeds are required for this exit type.");
+  }
+
+  const asset = await db.asset.findFirst({
+    where: { id: assetId, ...assetEntityFilter(ctx) },
+    include: {
+      exit: true,
+      landParcel: { select: { id: true, sale: true } },
+      vehicle: { select: { id: true } },
+      registeredCompany: { select: { id: true } },
+    },
+  });
+  if (!asset) throw new Error("Asset not found.");
+
+  if (asset.landParcel?.sale) {
+    throw new Error("This land parcel was sold via the Lands module. View the sale record there.");
+  }
+
+  if (!(await canRecordExitForAsset(ctx, asset))) {
+    throw new Error("You do not have permission to record an exit for this asset.");
+  }
+
+  const exit = await createAssetExitRecord({
+    assetId,
+    exitType,
+    exitDate,
+    proceeds,
+    currency,
+    counterparty,
+    notes,
+    recordedById: ctx.id,
+    recordCashInflow,
+  });
+
+  const agreementFiles = getFilesFromFormData(formData, "agreementFiles");
+  const transferFiles = getFilesFromFormData(formData, "transferFiles");
+  const closingFiles = getFilesFromFormData(formData, "closingFiles");
+  const otherFiles = getFilesFromFormData(formData, "otherFiles");
+
+  if (agreementFiles.length) {
+    await uploadExitFiles(exit.id, assetId, agreementFiles, "SALE_AGREEMENT", ctx.id);
+  }
+  if (transferFiles.length) {
+    await uploadExitFiles(exit.id, assetId, transferFiles, "TRANSFER_DEED", ctx.id);
+  }
+  if (closingFiles.length) {
+    await uploadExitFiles(exit.id, assetId, closingFiles, "CLOSING_STATEMENT", ctx.id);
+  }
+  if (otherFiles.length) {
+    await uploadExitFiles(exit.id, assetId, otherFiles, "OTHER", ctx.id);
+  }
+
+  await logAudit({
+    userId: ctx.id,
+    action: "CREATE",
+    resource: "AssetExit",
+    resourceId: exit.id,
+    metadata: { assetId, exitType, proceeds },
+  });
+
+  revalidatePath("/assets");
+  revalidatePath("/assets/" + assetId);
+  revalidatePath("/dashboard");
+  if (asset.landParcel) {
+    revalidatePath("/lands");
+    revalidatePath("/lands/" + asset.landParcel.id);
+  }
+  if (asset.vehicle) {
+    revalidatePath("/cars");
+    revalidatePath("/cars/" + asset.vehicle.id);
+  }
+  if (asset.registeredCompany) {
+    revalidatePath("/companies");
+    revalidatePath("/companies/" + asset.registeredCompany.id);
+  }
+
+  return exit;
+}
+
+export async function getAssetExitForAsset(assetId: string) {
+  const ctx = await requireModuleAccess("ASSETS");
+  const asset = await db.asset.findFirst({
+    where: { id: assetId, ...assetEntityFilter(ctx) },
+    select: { id: true },
+  });
+  if (!asset) return null;
+
+  return db.assetExit.findUnique({
+    where: { assetId },
+    include: { documents: { orderBy: { createdAt: "desc" } } },
+  });
+}
+
+export async function listRecentExits(limit = 5) {
+  const ctx = await requireModuleAccess("ASSETS");
+  const horizon = new Date();
+  horizon.setMonth(horizon.getMonth() - 12);
+
+  return db.assetExit.findMany({
+    where: {
+      exitDate: { gte: horizon },
+      asset: assetEntityFilter(ctx),
+    },
+    include: {
+      asset: { select: { id: true, name: true, category: true, entity: { select: { name: true } } } },
+    },
+    orderBy: { exitDate: "desc" },
+    take: limit,
+  });
+}
+
+export async function uploadAssetExitDocuments(formData: FormData) {
+  const ctx = await requireUserContext();
+  const assetExitId = String(formData.get("assetExitId") ?? "").trim();
+  const documentType = String(formData.get("documentType") ?? "") as AssetExitDocumentType;
+  if (!assetExitId) throw new Error("Exit record is required.");
+  if (!documentType) throw new Error("Document type is required.");
+
+  const exit = await db.assetExit.findFirst({
+    where: { id: assetExitId, asset: assetEntityFilter(ctx) },
+    include: { asset: { include: { landParcel: true, vehicle: true, registeredCompany: true } } },
+  });
+  if (!exit) throw new Error("Exit record not found.");
+  if (!(await canRecordExitForAsset(ctx, exit.asset))) {
+    throw new Error("You do not have permission to upload exit documents.");
+  }
+
+  const field =
+    documentType === "SALE_AGREEMENT"
+      ? "agreementFiles"
+      : documentType === "TRANSFER_DEED"
+        ? "transferFiles"
+        : documentType === "CLOSING_STATEMENT"
+          ? "closingFiles"
+          : "otherFiles";
+
+  const files = getFilesFromFormData(formData, field);
+  if (files.length === 0) throw new Error("At least one file is required.");
+
+  await uploadExitFiles(exit.id, exit.assetId, files, documentType, ctx.id);
+
+  revalidatePath("/assets/" + exit.assetId);
+}
+
+export async function deleteAssetExitDocument(id: string) {
+  const ctx = await requireUserContext();
+  const document = await db.assetExitDocument.findFirst({
+    where: { id, assetExit: { asset: assetEntityFilter(ctx) } },
+    include: { assetExit: true },
+  });
+  if (!document) throw new Error("Document not found.");
+
+  await deleteBlobUrl(document.fileUrl);
+  await db.assetExitDocument.delete({ where: { id } });
+
+  revalidatePath("/assets/" + document.assetExit.assetId);
+}

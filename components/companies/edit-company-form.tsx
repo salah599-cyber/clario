@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { updateCompany } from "@/lib/actions/companies";
 import type { CompanyOwnerInput } from "@/lib/actions/companies";
 import { CompanyOwnersFields } from "@/components/companies/company-owners-fields";
-import { ASSET_STATUS_LABELS } from "@/lib/labels";
+import { EDITABLE_ASSET_STATUS_ENTRIES } from "@/lib/labels";
 import { formatDateInput } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,7 +112,7 @@ export function EditCompanyForm({ company, entities }: { company: CompanyRecord;
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {Object.entries(ASSET_STATUS_LABELS).map(([value, label]) => (
+                {EDITABLE_ASSET_STATUS_ENTRIES.map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
                 ))}
               </SelectContent>

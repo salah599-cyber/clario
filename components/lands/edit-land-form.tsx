@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateLand } from "@/lib/actions/lands";
-import { ASSET_STATUS_LABELS, LAND_USE_LABELS } from "@/lib/labels";
+import { EDITABLE_ASSET_STATUS_ENTRIES, LAND_USE_LABELS } from "@/lib/labels";
 import { formatDateInput, formatDecimalInput } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -113,7 +113,7 @@ export function EditLandForm({ land, entities }: { land: LandRecord; entities: {
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {Object.entries(ASSET_STATUS_LABELS).map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
+                {EDITABLE_ASSET_STATUS_ENTRIES.map(([value, label]) => (<SelectItem key={value} value={value}>{label}</SelectItem>))}
               </SelectContent>
             </Select>
           </div>

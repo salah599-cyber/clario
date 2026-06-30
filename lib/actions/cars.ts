@@ -1,6 +1,7 @@
 "use server";
 
 import { put } from "@vercel/blob";
+import { assertStatusNotExited } from "@/lib/assets/status";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { deleteBlobUrl } from "@/lib/blob";
@@ -109,6 +110,8 @@ function readVehicleFormData(formData: FormData) {
   if (!entityId) throw new Error("Entity is required.");
   if (!make) throw new Error("Make is required.");
   if (!model) throw new Error("Model is required.");
+
+  assertStatusNotExited(status);
 
   return {
     name,
@@ -339,7 +342,7 @@ export async function getCar(id: string) {
     include: {
       entity: true,
       documents: { orderBy: { createdAt: "desc" } },
-      asset: true,
+      asset: { include: { exit: { include: { documents: { orderBy: { createdAt: "desc" } } } } } },
     },
   });
 }

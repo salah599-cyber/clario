@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createCompany } from "@/lib/actions/companies";
 import { CompanyOwnersFields } from "@/components/companies/company-owners-fields";
-import { ASSET_STATUS_LABELS } from "@/lib/labels";
+import { EDITABLE_ASSET_STATUS_ENTRIES } from "@/lib/labels";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -89,7 +89,7 @@ export function CreateCompanyForm({ entities }: { entities: EntityOption[] }) {
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {Object.entries(ASSET_STATUS_LABELS).map(([value, label]) => (
+                {EDITABLE_ASSET_STATUS_ENTRIES.map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
                 ))}
               </SelectContent>

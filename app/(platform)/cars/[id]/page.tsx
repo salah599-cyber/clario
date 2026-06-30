@@ -4,6 +4,8 @@ import { PlatformHeader } from "@/components/platform/platform-header";
 import { DeleteEntryButton } from "@/components/platform/delete-entry-button";
 import { EditLinkButton } from "@/components/platform/edit-link-button";
 import { UploadCarDocumentsForm } from "@/components/cars/upload-car-documents-form";
+import { AssetExitSummary } from "@/components/assets/asset-exit-summary";
+import { RecordAssetExitForm } from "@/components/assets/record-asset-exit-form";
 import { getCar, deleteCar, deleteCarDocument } from "@/lib/actions/cars";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
 import {
@@ -13,7 +15,7 @@ import {
   VEHICLE_DOCUMENT_TYPE_LABELS,
   VEHICLE_FUEL_TYPE_LABELS,
 } from "@/lib/labels";
-import { formatMoney, formatDate } from "@/lib/format";
+import { formatMoney, formatDate, formatDecimalInput } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,7 +47,7 @@ export default async function CarDetailPage({ params }: { params: Promise<{ id: 
           </Button>
           {car.assetId ? (
             <Button variant="outline" size="sm" asChild>
-              <Link href="/assets">View in Assets</Link>
+              <Link href={"/assets/" + car.assetId}>View in Assets</Link>
             </Button>
           ) : null}
           {showUpload ? (
@@ -101,6 +103,21 @@ export default async function CarDetailPage({ params }: { params: Promise<{ id: 
           </Card>
           {showUpload ? <UploadCarDocumentsForm vehicleId={car.id} /> : null}
         </div>
+
+        {showUpload && car.assetId && car.status !== "EXITED" && !car.asset?.exit ? (
+          <RecordAssetExitForm
+            assetId={car.assetId}
+            assetName={car.name}
+            currency={car.currency}
+            acquisitionCost={formatDecimalInput(car.acquisitionCost)}
+            redirectTo={"/cars/" + car.id}
+          />
+        ) : null}
+
+        {car.asset?.exit && car.assetId ? (
+          <AssetExitSummary exit={car.asset.exit} assetId={car.assetId} showActions={showUpload} />
+        ) : null}
+
         {(["MULKIA", "INSURANCE", "OTHER"] as const).map((type) => (
           <Card key={type}>
             <CardHeader>

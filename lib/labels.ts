@@ -15,6 +15,25 @@ export const ASSET_STATUS_LABELS: Record<string, string> = {
   DEFERRED: "Deferred",
 };
 
+export const EDITABLE_ASSET_STATUS_ENTRIES = Object.entries(ASSET_STATUS_LABELS).filter(
+  ([value]) => value !== "EXITED",
+);
+
+export const EXIT_TYPE_LABELS: Record<string, string> = {
+  SALE: "Sale",
+  TRANSFER: "Transfer",
+  LIQUIDATION: "Liquidation",
+  WRITE_OFF: "Write-off",
+  OTHER: "Other",
+};
+
+export const ASSET_EXIT_DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  SALE_AGREEMENT: "Sale Agreement",
+  TRANSFER_DEED: "Transfer Deed",
+  CLOSING_STATEMENT: "Closing Statement",
+  OTHER: "Other",
+};
+
 export const DOCUMENT_CATEGORY_LABELS: Record<string, string> = {
   KYC: "KYC",
   LEGAL: "Legal",

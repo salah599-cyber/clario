@@ -1,6 +1,7 @@
 "use server";
 
 import { put } from "@vercel/blob";
+import { assertStatusNotExited } from "@/lib/assets/status";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { deleteBlobUrl } from "@/lib/blob";
@@ -150,6 +151,8 @@ function readCompanyFormData(formData: FormData) {
   if (!name) throw new Error("Company name is required.");
   if (!registrationNumber) throw new Error("Registration number is required.");
   if (!entityId) throw new Error("Entity is required.");
+
+  assertStatusNotExited(status);
 
   return {
     name,
@@ -408,7 +411,7 @@ export async function getCompany(id: string) {
       entity: true,
       owners: { orderBy: { sortOrder: "asc" } },
       documents: { orderBy: { createdAt: "desc" } },
-      asset: true,
+      asset: { include: { exit: { include: { documents: { orderBy: { createdAt: "desc" } } } } } },
     },
   });
 }

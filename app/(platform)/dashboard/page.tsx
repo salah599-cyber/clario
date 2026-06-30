@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { formatDate, formatMoney } from "@/lib/format";
 import { getDashboardSummary, formatCurrencyTotals } from "@/lib/data/dashboard";
 import { requireModuleAccess } from "@/lib/permissions/access";
+import { EXIT_TYPE_LABELS } from "@/lib/labels";
 import {
   ArrowRight,
   Building2,
@@ -171,6 +172,45 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {summary.recentExits.length > 0 ? (
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <div>
+                <CardTitle>Recent Exits</CardTitle>
+                <CardDescription>Asset disposals in the last 12 months</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/assets?filter=exited">View all exited</Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <ul className="divide-y">
+                {summary.recentExits.map((exit) => (
+                  <li key={exit.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                    <div>
+                      <p className="text-sm font-medium">{exit.asset.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {EXIT_TYPE_LABELS[exit.exitType] ?? exit.exitType}
+                        {" · "}
+                        {exit.asset.entity.name}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium">
+                        {formatMoney(exit.proceeds, exit.currency)}
+                      </span>
+                      <span className="text-sm text-muted-foreground">{formatDate(exit.exitDate)}</span>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={"/assets/" + exit.asset.id}>View</Link>
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card>
           <CardHeader className="flex flex-row items-start justify-between gap-4">

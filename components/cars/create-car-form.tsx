@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createCar } from "@/lib/actions/cars";
 import { OMAN_GOVERNORATES, getWilayatsForGovernorate } from "@/lib/data/oman-locations";
 import {
-  ASSET_STATUS_LABELS,
+  EDITABLE_ASSET_STATUS_ENTRIES,
   VEHICLE_BODY_TYPE_LABELS,
   VEHICLE_CLASS_LABELS,
   VEHICLE_FUEL_TYPE_LABELS,
@@ -206,7 +206,7 @@ export function CreateCarForm({ entities }: { entities: EntityOption[] }) {
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {Object.entries(ASSET_STATUS_LABELS).map(([v, l]) => (<SelectItem key={v} value={v}>{l}</SelectItem>))}
+                {EDITABLE_ASSET_STATUS_ENTRIES.map(([v, l]) => (<SelectItem key={v} value={v}>{l}</SelectItem>))}
               </SelectContent>
             </Select>
           </div>

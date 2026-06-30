@@ -11,7 +11,7 @@ import {
   landEntityFilter,
 } from "@/lib/permissions/scoped-queries";
 import type { UserContext } from "@/lib/permissions/types";
-import { ASSET_CATEGORY_LABELS } from "@/lib/labels";
+import { ASSET_CATEGORY_LABELS, EXIT_TYPE_LABELS } from "@/lib/labels";
 
 export type CurrencyTotal = {
   currency: string;
@@ -43,6 +43,21 @@ export type DashboardReminder = {
   severity: "warning" | "danger";
 };
 
+export type DashboardRecentExit = {
+  id: string;
+  exitType: string;
+  exitDate: Date;
+  proceeds: { toString(): string } | null;
+  currency: string;
+  counterparty: string | null;
+  asset: {
+    id: string;
+    name: string;
+    category: string;
+    entity: { name: string };
+  };
+};
+
 export type DashboardSummary = {
   portfolioTotals: CurrencyTotal[];
   liabilityTotals: CurrencyTotal[];
@@ -52,6 +67,7 @@ export type DashboardSummary = {
   categoryBreakdown: CategoryBreakdown[];
   moduleSummaries: ModuleSummary[];
   reminders: DashboardReminder[];
+  recentExits: DashboardRecentExit[];
 };
 
 const COUNTABLE_ASSET_STATUSES = ["ACTIVE", "MONITOR"] as const;
@@ -117,6 +133,7 @@ export async function getDashboardSummary(ctx: UserContext): Promise<DashboardSu
   const categoryMap = new Map<string, { count: number; totals: Map<string, number> }>();
   const moduleSummaries: ModuleSummary[] = [];
   const reminders: DashboardReminder[] = [];
+  let recentExits: DashboardRecentExit[] = [];
 
   let activeAssetCount = 0;
 
@@ -174,6 +191,27 @@ export async function getDashboardSummary(ctx: UserContext): Promise<DashboardSu
       const balance = liability.outstandingBalance ?? liability.amount;
       addToCurrencyMap(liabilityMap, liability.currency, parseFloat(balance.toString()));
     }
+
+    const exitHorizon = new Date();
+    exitHorizon.setMonth(exitHorizon.getMonth() - 12);
+    recentExits = await db.assetExit.findMany({
+      where: {
+        exitDate: { gte: exitHorizon },
+        asset: assetEntityFilter(ctx),
+      },
+      include: {
+        asset: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            entity: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { exitDate: "desc" },
+      take: 8,
+    });
   }
 
   if (canAccess(ctx, "LOANS")) {
@@ -480,6 +518,7 @@ export async function getDashboardSummary(ctx: UserContext): Promise<DashboardSu
       }),
     moduleSummaries,
     reminders: reminders.slice(0, 12),
+    recentExits,
   };
 }
 

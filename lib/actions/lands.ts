@@ -1,6 +1,8 @@
 ﻿"use server";
 
 import { put } from "@vercel/blob";
+import { createAssetExitRecord } from "@/lib/actions/asset-exits";
+import { assertStatusNotExited } from "@/lib/assets/status";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { deleteBlobUrl } from "@/lib/blob";
@@ -205,6 +207,8 @@ export async function createLand(formData: FormData) {
   if (!name) throw new Error("Land name is required.");
   if (!entityId) throw new Error("Entity is required.");
 
+  assertStatusNotExited(status);
+
   if (ctx.entityIds.length > 0 && !ctx.entityIds.includes(entityId)) {
     if (ctx.role !== "PRINCIPAL") {
       throw new Error("You do not have access to this entity.");
@@ -371,7 +375,7 @@ export async function getLand(id: string) {
     include: {
       entity: true,
       documents: { orderBy: { createdAt: "desc" } },
-      asset: true,
+      asset: { include: { exit: { include: { documents: { orderBy: { createdAt: "desc" } } } } } },
       sale: {
         include: {
           documents: { orderBy: { createdAt: "desc" } },
@@ -470,6 +474,8 @@ export async function updateLand(id: string, formData: FormData) {
 
   if (!name) throw new Error("Land name is required.");
   if (!entityId) throw new Error("Entity is required.");
+
+  assertStatusNotExited(status);
 
   if (ctx.entityIds.length > 0 && !ctx.entityIds.includes(entityId)) {
     if (ctx.role !== "PRINCIPAL" && !ctx.isSuperAdmin) {
@@ -604,20 +610,22 @@ export async function recordLandSale(formData: FormData) {
     },
   });
 
-  await db.landParcel.update({
-    where: { id: landParcelId },
-    data: { status: "EXITED" },
-  });
-
   if (land.assetId) {
-    await db.asset.update({
-      where: { id: land.assetId },
-      data: {
-        status: "EXITED",
-        currentValue: saleAmount,
-        currency,
-        valueUpdatedAt: new Date(),
-      },
+    await createAssetExitRecord({
+      assetId: land.assetId,
+      exitType: "SALE",
+      exitDate: saleDate,
+      proceeds: saleAmount,
+      currency,
+      counterparty: soldTo,
+      notes,
+      recordedById: ctx.id,
+      landSaleId: sale.id,
+    });
+  } else {
+    await db.landParcel.update({
+      where: { id: landParcelId },
+      data: { status: "EXITED" },
     });
   }
 
@@ -650,6 +658,7 @@ export async function recordLandSale(formData: FormData) {
   revalidatePath("/lands");
   revalidatePath("/lands/" + landParcelId);
   revalidatePath("/assets");
+  if (land.assetId) revalidatePath("/assets/" + land.assetId);
   revalidatePath("/dashboard");
   return sale;
 }

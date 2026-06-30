@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit/log";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
 import { assetEntityFilter } from "@/lib/permissions/scoped-queries";
+import { assertStatusNotExited } from "@/lib/assets/status";
 import type { AssetCategory, AssetStatus } from "@/lib/generated/prisma/client";
 
 export type CreateAssetInput = {
@@ -57,6 +58,8 @@ export async function createAsset(input: CreateAssetInput) {
     }
   }
 
+  assertStatusNotExited(input.status);
+
   const asset = await db.asset.create({
     data: {
       name: input.name.trim(),
@@ -85,14 +88,23 @@ export async function createAsset(input: CreateAssetInput) {
   return asset;
 }
 
-export async function listAssets() {
+export async function listAssets(filter: "all" | "active" | "exited" = "all") {
   const ctx = await requireModuleAccess("ASSETS");
+  const statusFilter =
+    filter === "active"
+      ? { status: { not: "EXITED" as const } }
+      : filter === "exited"
+        ? { status: "EXITED" as const }
+        : {};
+
   return db.asset.findMany({
-    where: assetEntityFilter(ctx),
+    where: { ...assetEntityFilter(ctx), ...statusFilter },
     include: {
       entity: true,
+      exit: true,
       landParcel: { select: { id: true } },
       vehicle: { select: { id: true } },
+      registeredCompany: { select: { id: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
@@ -140,8 +152,10 @@ export async function getAsset(id: string) {
     where: { id, ...assetEntityFilter(ctx) },
     include: {
       entity: true,
-      landParcel: { select: { id: true } },
+      exit: { include: { documents: { orderBy: { createdAt: "desc" } } } },
+      landParcel: { select: { id: true, sale: { select: { id: true } } } },
       vehicle: { select: { id: true } },
+      registeredCompany: { select: { id: true } },
     },
   });
 }
@@ -166,6 +180,8 @@ export async function updateAsset(id: string, input: CreateAssetInput) {
   if (asset.vehicle) {
     throw new Error("This asset is linked to a vehicle. Edit it from the Cars section instead.");
   }
+
+  assertStatusNotExited(input.status);
 
   if (ctx.entityIds.length > 0 && !ctx.entityIds.includes(input.entityId)) {
     if (ctx.role !== "PRINCIPAL" && !ctx.isSuperAdmin) {

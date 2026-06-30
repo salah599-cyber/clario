@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DeleteEntryButton } from "@/components/platform/delete-entry-button";
 import { UploadLandDocumentsForm } from "@/components/lands/upload-land-documents-form";
 import { RecordLandSaleForm } from "@/components/lands/record-land-sale-form";
+import { AssetExitSummary } from "@/components/assets/asset-exit-summary";
 import { UploadLandSaleDocumentsForm } from "@/components/lands/upload-land-sale-documents-form";
 import { deleteLandDocument, deleteLandSaleDocument } from "@/lib/actions/lands";
 import {
@@ -49,6 +50,30 @@ export type LandDetailData = {
   currency: string;
   notes: string | null;
   assetId: string | null;
+  asset?: {
+    id: string;
+    exit: {
+      id: string;
+      exitType: string;
+      exitDate: Date | string;
+      proceeds: { toString(): string } | null;
+      currency: string;
+      counterparty: string | null;
+      acquisitionCost: { toString(): string } | null;
+      realizedGain: { toString(): string } | null;
+      recordCashInflow: boolean;
+      notes: string | null;
+      landSaleId: string | null;
+      documents: {
+        id: string;
+        documentType: string;
+        label: string | null;
+        fileName: string;
+        fileUrl: string;
+        createdAt: Date | string;
+      }[];
+    } | null;
+  } | null;
   entity: { name: string };
   documents: {
     id: string;
@@ -177,6 +202,10 @@ export function LandDetailContent({
         <RecordLandSaleForm landParcelId={land.id} landName={land.name} currency={land.currency} />
       ) : null}
 
+      {land.asset?.exit && land.assetId ? (
+        <AssetExitSummary exit={land.asset.exit} assetId={land.assetId} showActions={showActions} />
+      ) : null}
+
       {showActions && !land.sale ? (
         <UploadLandDocumentsForm landParcelId={land.id} international={international} />
       ) : null}
@@ -213,7 +242,7 @@ export function LandDetailContent({
         <div className="flex flex-wrap gap-2">
           {land.assetId ? (
             <Button variant="outline" size="sm" asChild>
-              <Link href="/assets">View in Assets</Link>
+              <Link href={"/assets/" + land.assetId}>View in Assets</Link>
             </Button>
           ) : null}
           {showActions ? (
