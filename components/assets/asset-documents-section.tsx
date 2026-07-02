@@ -99,6 +99,8 @@ export function AssetDocumentsSection({
   documents: AssetDocumentRow[];
   canEdit: boolean;
 }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
   const photos = documents.filter((d) => d.documentType === "PHOTO");
   const otherGroups = ["WARRANTY", "INVOICE", "RECEIPT", "MANUAL", "OTHER"] as const;
 
