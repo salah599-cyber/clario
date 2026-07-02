@@ -327,3 +327,18 @@ export const PE_DOCUMENT_TYPE_LABELS: Record<string, string> = {
   CONVERTIBLE_NOTE: "Convertible Note",
   OTHER: "Other",
 };
+
+export const PUBLIC_MARKET_LABELS: Record<string, string> = {
+  MSX: "MSX",
+  USA: "USA",
+  HONG_KONG: "Hong Kong",
+  CHINA: "China",
+  INDIA: "India",
+  UK: "UK",
+  OTHER: "Other",
+};
+
+export const PUBLIC_HOLDING_SOURCE_LABELS: Record<string, string> = {
+  IMPORT: "Import",
+  MANUAL: "Manual",
+};
