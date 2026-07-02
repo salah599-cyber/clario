@@ -1,5 +1,5 @@
 /**
- * Idempotently applies public markets columns to existing production database.
+ * Idempotently applies public markets columns to an existing production database.
  * Uses pg directly so we never invoke Prisma Migrate (avoids P3005 on Vercel).
  *
  * Run manually:
@@ -8,9 +8,43 @@
 require("dotenv").config({ path: ".env.local" });
 require("dotenv").config();
 
-const fs = require("fs");
 const path = require("path");
 const { Client } = require("pg");
+
+const PUBLIC_MARKETS_SCHEMA_STATEMENTS = [
+  `CREATE TYPE "PublicMarket" AS ENUM ('MSX', 'USA', 'HONG_KONG', 'CHINA', 'INDIA', 'UK', 'OTHER')`,
+  `CREATE TYPE "PublicHoldingSource" AS ENUM ('IMPORT', 'MANUAL')`,
+  `ALTER TABLE "PublicEquityHolding" ADD COLUMN IF NOT EXISTS "market" "PublicMarket" NOT NULL DEFAULT 'MSX'`,
+  `ALTER TABLE "PublicEquityHolding" ADD COLUMN IF NOT EXISTS "exchange" TEXT`,
+  `ALTER TABLE "PublicEquityHolding" ADD COLUMN IF NOT EXISTS "isin" TEXT`,
+  `ALTER TABLE "PublicEquityHolding" ADD COLUMN IF NOT EXISTS "cusip" TEXT`,
+  `ALTER TABLE "PublicEquityHolding" ADD COLUMN IF NOT EXISTS "sedol" TEXT`,
+  `ALTER TABLE "PublicEquityHolding" ADD COLUMN IF NOT EXISTS "country" TEXT`,
+  `ALTER TABLE "PublicEquityHolding" ADD COLUMN IF NOT EXISTS "source" "PublicHoldingSource" NOT NULL DEFAULT 'IMPORT'`,
+  `ALTER TABLE "ImportBatch" ADD COLUMN IF NOT EXISTS "market" "PublicMarket"`,
+  `ALTER TABLE "ImportBatch" ADD COLUMN IF NOT EXISTS "broker" TEXT`,
+  `ALTER TABLE "ImportBatch" ADD COLUMN IF NOT EXISTS "accountNumber" TEXT`,
+  `ALTER TABLE "ImportBatch" ADD COLUMN IF NOT EXISTS "asOfDate" TIMESTAMP(3)`,
+  `ALTER TABLE "ImportBatch" ADD COLUMN IF NOT EXISTS "parserId" TEXT`,
+  `UPDATE "PublicEquityHolding" SET "market" = 'MSX' WHERE "market" IS NULL`,
+  `UPDATE "PublicEquityHolding" SET "source" = 'IMPORT' WHERE "source" IS NULL`,
+  `CREATE INDEX IF NOT EXISTS "PublicEquityHolding_assetId_market_idx" ON "PublicEquityHolding" ("assetId", "market")`,
+  `CREATE INDEX IF NOT EXISTS "PublicEquityHolding_market_idx" ON "PublicEquityHolding" ("market")`,
+];
+
+const PUBLIC_MARKETS_SCHEMA_COLUMN_CHECK_SQL = `
+  SELECT EXISTS (
+    SELECT 1
+    FROM pg_attribute a
+    JOIN pg_class c ON a.attrelid = c.oid
+    JOIN pg_namespace n ON c.relnamespace = n.oid
+    WHERE n.nspname = 'public'
+      AND c.relname = 'PublicEquityHolding'
+      AND a.attname = 'market'
+      AND a.attnum > 0
+      AND NOT a.attisdropped
+  ) AS "exists"
+`;
 
 function getDatabaseUrl() {
   return (
@@ -22,19 +56,6 @@ function getDatabaseUrl() {
   );
 }
 
-function splitSqlStatements(sql) {
-  return sql
-    .split(/;\s*(?:\n|$)/)
-    .map((chunk) =>
-      chunk
-        .split("\n")
-        .filter((line) => !line.trim().startsWith("--"))
-        .join("\n")
-        .trim(),
-    )
-    .filter(Boolean);
-}
-
 function isIgnorableSchemaError(message) {
   return (
     message.includes("already exists") ||
@@ -44,17 +65,8 @@ function isIgnorableSchemaError(message) {
   );
 }
 
-async function columnExists(client, tableName, columnName) {
-  const result = await client.query(
-    `SELECT EXISTS (
-      SELECT 1
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND table_name = $1
-        AND column_name = $2
-    )`,
-    [tableName, columnName],
-  );
+async function columnExists(client) {
+  const result = await client.query(PUBLIC_MARKETS_SCHEMA_COLUMN_CHECK_SQL);
   return Boolean(result.rows[0]?.exists);
 }
 
@@ -69,16 +81,12 @@ async function main() {
   await client.connect();
 
   try {
-    if (await columnExists(client, "PublicEquityHolding", "market")) {
+    if (await columnExists(client)) {
       console.log("Public markets schema already present; nothing to do.");
       return;
     }
 
-    const sqlPath = path.join(__dirname, "..", "lib", "db", "public-markets-schema.sql");
-    const sql = fs.readFileSync(sqlPath, "utf8");
-    const statements = splitSqlStatements(sql);
-
-    for (const statement of statements) {
+    for (const statement of PUBLIC_MARKETS_SCHEMA_STATEMENTS) {
       try {
         await client.query(statement);
       } catch (error) {
@@ -88,7 +96,7 @@ async function main() {
       }
     }
 
-    if (!(await columnExists(client, "PublicEquityHolding", "market"))) {
+    if (!(await columnExists(client))) {
       throw new Error(
         "Public markets schema sync finished but PublicEquityHolding.market is still missing.",
       );

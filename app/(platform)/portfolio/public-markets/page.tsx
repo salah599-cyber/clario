@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { PlatformHeader } from "@/components/platform/platform-header";
 import { AddManualHoldingForm } from "@/components/public-markets/add-manual-holding-form";
 import { ExportHoldingsButton } from "@/components/public-markets/export-holdings-button";
@@ -21,7 +20,6 @@ import {
   resolveMarketFromSearchParam,
 } from "@/lib/data/public-markets";
 import { MARKET_CONFIG } from "@/lib/public-markets/constants";
-import { ensurePublicMarketsSchema } from "@/lib/db/ensure-public-markets-schema";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,8 +30,6 @@ export default async function PublicMarketsPage({
 }: {
   searchParams: Promise<{ entity?: string; market?: string }>;
 }) {
-  await ensurePublicMarketsSchema();
-
   const { entity: entityParam, market: marketParam } = await searchParams;
   const { mode, market } = resolveMarketFromSearchParam(marketParam);
   const ctx = await requireModuleAccess("ASSETS");

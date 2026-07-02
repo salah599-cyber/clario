@@ -10,6 +10,7 @@ import { importBrokerReportsForEntity } from "@/lib/public-markets/import-report
 import { MARKET_CONFIG, PUBLIC_MARKETS_PATH } from "@/lib/public-markets/constants";
 import type { ImportFileResult, ManualHoldingInput } from "@/lib/public-markets/types";
 import { ensurePortfolioAsset, refreshAssetValue } from "@/lib/public-markets/import-reports";
+import { ensurePublicMarketsSchema } from "@/lib/db/ensure-public-markets-schema";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
 import { MAX_UPLOAD_BYTES } from "@/lib/upload-limits";
 
@@ -76,6 +77,8 @@ export async function deletePublicHolding(holdingId: string) {
     throw new Error("You do not have permission to delete holdings.");
   }
 
+  await ensurePublicMarketsSchema();
+
   const holding = await db.publicEquityHolding.findUnique({
     where: { id: holdingId },
     include: { asset: true },
@@ -140,6 +143,7 @@ export async function addManualHolding(formData: FormData) {
     throw new Error("You do not have access to this entity.");
   }
 
+  await ensurePublicMarketsSchema();
   const config = MARKET_CONFIG[market];
   const asset = await ensurePortfolioAsset(entityId, market);
   const marketValue =
@@ -192,6 +196,7 @@ function parseOptionalNumber(value: FormDataEntryValue | null): number | undefin
 
 export async function exportPublicHoldings(formData: FormData): Promise<{ fileName: string; base64: string }> {
   const ctx = await requireModuleAccess("ASSETS");
+  await ensurePublicMarketsSchema();
   const entityId = String(formData.get("entityId") ?? "").trim() || undefined;
   const marketParam = String(formData.get("market") ?? "").trim();
   const market = marketParam && marketParam !== "ALL" ? parseMarket(marketParam) : null;

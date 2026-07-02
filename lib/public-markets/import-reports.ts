@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit/log";
 import type { PublicMarket } from "@/lib/generated/prisma/client";
 import { MARKET_CONFIG, PUBLIC_MARKETS_PATH } from "@/lib/public-markets/constants";
+import { ensurePublicMarketsSchema } from "@/lib/db/ensure-public-markets-schema";
 import { parseMarketReport } from "@/lib/public-markets/parsers/router";
 import type { BrokerReportFile, ImportFileResult } from "@/lib/public-markets/types";
 import type { UserContext } from "@/lib/permissions/types";
@@ -153,6 +154,7 @@ export async function importBrokerReportsForEntity(
   market: PublicMarket,
   files: BrokerReportFile[],
 ): Promise<ImportFileResult[]> {
+  await ensurePublicMarketsSchema();
   const asset = await ensurePortfolioAsset(entityId, market);
 
   const results = await Promise.all(

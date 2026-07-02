@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import type { PublicMarket } from "@/lib/generated/prisma/client";
 import { ensureDefaultEntity } from "@/lib/data/entities";
+import { ensurePublicMarketsSchema } from "@/lib/db/ensure-public-markets-schema";
 import {
   MARKET_CONFIG,
   PUBLIC_MARKET_ORDER,
@@ -88,6 +89,10 @@ function toNumber(value: { toString(): string } | number | null | undefined): nu
   return Number.isNaN(num) ? null : num;
 }
 
+async function ensurePublicMarketsDataLayerReady() {
+  await ensurePublicMarketsSchema();
+}
+
 export async function findPortfolioAsset(entityId: string, market: PublicMarket) {
   return db.asset.findFirst({
     where: {
@@ -140,6 +145,7 @@ export async function getPublicHoldings(
   ctx: UserContext,
   options: { entityId?: string; market?: PublicMarket | null } = {},
 ): Promise<PublicHoldingRow[]> {
+  await ensurePublicMarketsDataLayerReady();
   const entityFilter = assetEntityFilter(ctx);
   const { entityId, market } = options;
 
@@ -180,6 +186,7 @@ export async function getPublicImportBatches(
   ctx: UserContext,
   options: { market?: PublicMarket | null; limit?: number } = {},
 ): Promise<PublicImportBatchRow[]> {
+  await ensurePublicMarketsDataLayerReady();
   const { market, limit = 15 } = options;
   const entityFilter = assetEntityFilter(ctx);
 
@@ -276,6 +283,7 @@ export async function getPublicMarketSummary(
   entityId: string | undefined,
   market: PublicMarket,
 ): Promise<PublicMarketSummary | null> {
+  await ensurePublicMarketsDataLayerReady();
   const entity = entityId
     ? await db.entity.findFirst({ where: { id: entityId } })
     : await db.entity.findFirst({ orderBy: { name: "asc" } });
@@ -289,6 +297,7 @@ export async function getAllMarketsSummary(
   ctx: UserContext,
   entityId?: string,
 ): Promise<AllMarketsSummary | null> {
+  await ensurePublicMarketsDataLayerReady();
   const entity = entityId
     ? await db.entity.findFirst({ where: { id: entityId } })
     : await db.entity.findFirst({ orderBy: { name: "asc" } });
@@ -330,6 +339,7 @@ export async function getAllMarketsSummary(
 }
 
 export async function listPublicMarketsEntities(ctx: UserContext) {
+  await ensurePublicMarketsDataLayerReady();
   await ensureDefaultEntity();
 
   const entityFilter = assetEntityFilter(ctx);
