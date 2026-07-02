@@ -278,6 +278,22 @@ export const PE_VALUATION_METHOD_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
+export const ASSET_DISTRIBUTION_TYPE_LABELS: Record<string, string> = {
+  DIVIDEND: "Dividend",
+  DISTRIBUTION: "Distribution",
+  RETURN_OF_CAPITAL: "Return of Capital",
+  INTEREST: "Interest",
+  COUPON: "Coupon",
+  RENT: "Rent",
+  EXIT_PROCEEDS: "Exit Proceeds",
+  OTHER: "Other",
+};
+
+export const ASSET_DISTRIBUTION_SOURCE_LABELS: Record<string, string> = {
+  MANUAL: "Manual",
+  PRIVATE_EQUITY: "PE / VC",
+};
+
 export const PE_DISTRIBUTION_TYPE_LABELS: Record<string, string> = {
   DIVIDEND: "Dividend",
   RETURN_OF_CAPITAL: "Return of Capital",

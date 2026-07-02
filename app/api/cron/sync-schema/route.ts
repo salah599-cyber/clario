@@ -12,17 +12,26 @@ export async function GET(request: Request) {
   }
 
   try {
-    const scriptPath = path.join(process.cwd(), "scripts", "sync-pe-schema.cjs");
-    const { stdout, stderr } = await execFileAsync("node", [scriptPath], {
-      env: process.env,
-      timeout: 120_000,
-    });
+    const scripts = ["sync-pe-schema.cjs", "sync-asset-distribution-schema.cjs"];
+    const results: { script: string; stdout: string; stderr?: string }[] = [];
+
+    for (const script of scripts) {
+      const scriptPath = path.join(process.cwd(), "scripts", script);
+      const { stdout, stderr } = await execFileAsync("node", [scriptPath], {
+        env: process.env,
+        timeout: 120_000,
+      });
+      results.push({
+        script,
+        stdout: stdout.trim(),
+        stderr: stderr.trim() || undefined,
+      });
+    }
 
     return NextResponse.json({
       ok: true,
       job: "sync-schema",
-      stdout: stdout.trim(),
-      stderr: stderr.trim() || undefined,
+      results,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Schema sync failed";

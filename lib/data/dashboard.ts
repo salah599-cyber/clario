@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { ensurePeSchema } from "@/lib/db/ensure-pe-schema";
+import { ensureAssetDistributionSchema } from "@/lib/db/ensure-asset-distribution-schema";
 import { canAccess, getModulePermission } from "@/lib/permissions/access";
 import {
   assetEntityFilter,
@@ -181,12 +182,31 @@ export async function getDashboardSummary(ctx: UserContext): Promise<DashboardSu
 
     const bankAccountCount = await db.bankAccount.count({ where: bankAccountFilter(ctx) });
 
+    let distributionsDetail = activeAssetCount + " active";
+    try {
+      await ensureAssetDistributionSchema();
+      const ytdStart = new Date(new Date().getFullYear(), 0, 1);
+      const incomeYtd = await db.assetDistribution.aggregate({
+        where: {
+          asset: assetEntityFilter(ctx),
+          distributionDate: { gte: ytdStart },
+        },
+        _sum: { amount: true },
+      });
+      const ytdTotal = incomeYtd._sum.amount ? parseFloat(incomeYtd._sum.amount.toString()) : 0;
+      if (ytdTotal > 0) {
+        distributionsDetail += ` · ${ytdTotal.toLocaleString("en-OM", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} OMR income YTD`;
+      }
+    } catch (error) {
+      console.error("Asset distribution dashboard summary failed:", error);
+    }
+
     moduleSummaries.push({
       module: "ASSETS",
       label: "Assets",
       href: "/assets",
       count: assets.length,
-      detail: activeAssetCount + " active",
+      detail: distributionsDetail,
     });
 
     moduleSummaries.push({

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { logAudit } from "@/lib/audit/log";
+import { ensureAssetDistributionSchema } from "@/lib/db/ensure-asset-distribution-schema";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
 import { assetEntityFilter } from "@/lib/permissions/scoped-queries";
 import { assertStatusNotExited } from "@/lib/assets/status";
@@ -158,7 +159,9 @@ export async function deleteAsset(id: string) {
 
 export async function getAsset(id: string) {
   const ctx = await requireModuleAccess("ASSETS");
-  return db.asset.findFirst({
+  await ensureAssetDistributionSchema();
+
+  const asset = await db.asset.findFirst({
     where: { id, ...assetEntityFilter(ctx) },
     include: {
       entity: true,
@@ -166,8 +169,35 @@ export async function getAsset(id: string) {
       landParcel: { select: { id: true, sale: { select: { id: true } } } },
       vehicle: { select: { id: true } },
       registeredCompany: { select: { id: true } },
+      peCompany: { select: { id: true, name: true } },
+      distributions: {
+        orderBy: { distributionDate: "desc" },
+        include: { documents: { orderBy: { createdAt: "desc" } } },
+      },
     },
   });
+
+  if (asset?.peCompany) {
+    const { syncAllPeDistributionsForCompany } = await import("@/lib/assets/pe-distribution-sync");
+    await syncAllPeDistributionsForCompany(asset.peCompany.id);
+    return db.asset.findFirst({
+      where: { id, ...assetEntityFilter(ctx) },
+      include: {
+        entity: true,
+        exit: { include: { documents: { orderBy: { createdAt: "desc" } } } },
+        landParcel: { select: { id: true, sale: { select: { id: true } } } },
+        vehicle: { select: { id: true } },
+        registeredCompany: { select: { id: true } },
+        peCompany: { select: { id: true, name: true } },
+        distributions: {
+          orderBy: { distributionDate: "desc" },
+          include: { documents: { orderBy: { createdAt: "desc" } } },
+        },
+      },
+    });
+  }
+
+  return asset;
 }
 
 export async function updateAsset(id: string, input: CreateAssetInput) {

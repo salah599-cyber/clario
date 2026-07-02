@@ -179,6 +179,22 @@ enum CashFlowType {
   OUTFLOW
 }
 
+enum AssetDistributionType {
+  DIVIDEND
+  DISTRIBUTION
+  RETURN_OF_CAPITAL
+  INTEREST
+  COUPON
+  RENT
+  EXIT_PROCEEDS
+  OTHER
+}
+
+enum AssetDistributionSource {
+  MANUAL
+  PRIVATE_EQUITY
+}
+
 enum ExitType {
   SALE
   TRANSFER
@@ -341,6 +357,7 @@ model Asset {
   publicHoldings  PublicEquityHolding[]
   valuations      AssetValuation[]
   cashFlows       AssetCashFlow[]
+  distributions   AssetDistribution[]
   documents       Document[]
   expenses        Expense[]
   liabilities     Liability[]
@@ -864,6 +881,44 @@ model AssetCashFlow {
   createdAt   DateTime     @default(now())
 }
 
+model AssetDistribution {
+  id               String                  @id @default(cuid())
+  assetId          String
+  asset            Asset                   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  distributionDate DateTime
+  amount           Decimal                 @db.Decimal(18, 2)
+  currency         String                  @default("OMR")
+  netAmount        Decimal?                @db.Decimal(18, 2)
+  taxWithheld      Decimal?                @db.Decimal(18, 2)
+  distributionType AssetDistributionType   @default(DISTRIBUTION)
+  source           AssetDistributionSource @default(MANUAL)
+  bankReference    String?
+  notes            String?
+  peDistributionId String?                 @unique
+  peDistribution   PeDistribution?         @relation(fields: [peDistributionId], references: [id], onDelete: SetNull)
+  recordedById     String?
+  documents        AssetDistributionDocument[]
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  @@index([assetId, distributionDate])
+  @@index([assetId, distributionType])
+}
+
+model AssetDistributionDocument {
+  id                 String            @id @default(cuid())
+  assetDistributionId String
+  assetDistribution  AssetDistribution @relation(fields: [assetDistributionId], references: [id], onDelete: Cascade)
+  fileName           String
+  fileUrl            String
+  mimeType           String
+  fileSize           Int
+  uploadedById       String?
+  createdAt          DateTime          @default(now())
+
+  @@index([assetDistributionId])
+}
+
 model DocumentCategoryRecord {
   id         String              @id @default(cuid())
   name       String              @unique
@@ -1322,6 +1377,7 @@ model PeDistribution {
   notes            String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
+  assetDistribution AssetDistribution?
 
   @@index([companyId, distributionDate])
 }
