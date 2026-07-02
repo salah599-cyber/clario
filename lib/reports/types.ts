@@ -17,13 +17,19 @@ export type ReportId =
   | "document-expiry"
   | "bank-accounts"
   | "proposals"
-  | "valuation-history";
+  | "valuation-history"
+  | "re-portfolio"
+  | "re-rent-register"
+  | "re-leases"
+  | "re-expenses"
+  | "re-valuation-history";
 
 export type ReportCategory =
   | "balance-sheet"
   | "portfolio"
   | "operations"
   | "registers"
+  | "real-estate"
   | "advanced";
 
 export type ReportDefinition = {

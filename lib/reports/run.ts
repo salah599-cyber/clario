@@ -19,6 +19,13 @@ import {
   buildValuationHistoryReport,
   buildVehiclesReport,
 } from "@/lib/reports/builders/index";
+import {
+  buildReExpensesReport,
+  buildReLeasesReport,
+  buildRePortfolioReport,
+  buildReRentRegisterReport,
+  buildReValuationHistoryReport,
+} from "@/lib/reports/builders/real-estate";
 import type { ReportId, ReportParams, ReportResult } from "@/lib/reports/types";
 
 const BUILDERS: Record<
@@ -42,6 +49,11 @@ const BUILDERS: Record<
   "bank-accounts": buildBankAccountsReport,
   proposals: buildProposalsReport,
   "valuation-history": buildValuationHistoryReport,
+  "re-portfolio": buildRePortfolioReport,
+  "re-rent-register": buildReRentRegisterReport,
+  "re-leases": buildReLeasesReport,
+  "re-expenses": buildReExpensesReport,
+  "re-valuation-history": buildReValuationHistoryReport,
 };
 
 export async function runReport(
