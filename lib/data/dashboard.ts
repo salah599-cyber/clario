@@ -448,20 +448,31 @@ export async function getDashboardSummary(ctx: UserContext): Promise<DashboardSu
   }
 
   if (canAccess(ctx, "PRIVATE_EQUITY")) {
-    const peCompanies = await db.peCompany.findMany({
-      where: {
-        ...peCompanyEntityFilter(ctx),
-        status: { in: ["ACTIVE", "FOLLOW_ON_PENDING", "WATCHLIST"] },
-      },
-      select: { id: true },
-    });
+    try {
+      const peCompanies = await db.peCompany.findMany({
+        where: {
+          ...peCompanyEntityFilter(ctx),
+          status: { in: ["ACTIVE", "FOLLOW_ON_PENDING", "WATCHLIST"] },
+        },
+        select: { id: true },
+      });
 
-    moduleSummaries.push({
-      module: "PRIVATE_EQUITY",
-      label: "PE / VC Portfolio",
-      href: "/portfolio/pe",
-      count: peCompanies.length,
-    });
+      moduleSummaries.push({
+        module: "PRIVATE_EQUITY",
+        label: "PE / VC Portfolio",
+        href: "/portfolio/pe",
+        count: peCompanies.length,
+      });
+    } catch (error) {
+      console.error("PE portfolio summary unavailable:", error);
+      moduleSummaries.push({
+        module: "PRIVATE_EQUITY",
+        label: "PE / VC Portfolio",
+        href: "/portfolio/pe",
+        count: 0,
+        detail: "Database migration pending",
+      });
+    }
   }
 
   if (canAccess(ctx, "DOCUMENTS")) {
