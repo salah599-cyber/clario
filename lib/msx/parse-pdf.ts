@@ -1,10 +1,12 @@
 import type { ParseReportResult } from "./types";
 import { detectBroker, extractAccountNumber, extractAsOfDate } from "./detect-broker";
 import { dedupeHoldings, parseTextLines, rowsToHoldings } from "./holdings";
+import { loadPdfRuntime } from "./pdf-runtime";
 
 async function extractPdfContent(buffer: Buffer): Promise<{ text: string; tableRows: unknown[][] }> {
-  const { PDFParse } = await import("pdf-parse");
-  const parser = new PDFParse({ data: buffer });
+  const { PDFParse, CanvasFactory } = await loadPdfRuntime();
+  const parser = new PDFParse({ data: buffer, CanvasFactory });
+
   try {
     const textResult = await parser.getText();
     let tableRows: unknown[][] = [];
@@ -65,7 +67,7 @@ export async function parsePdfReport(buffer: Buffer, fileName: string): Promise<
   const asOfDate = extractAsOfDate(text);
 
   const tableHoldings = tableRows.length > 0 ? rowsToHoldings(tableRows) : [];
-  const textHoldings = parseTextLines(text);
+  const textHoldings = dedupeHoldings([...parseTextLines(text), ...parsePdfTableText(text)]);
   const holdings = dedupeHoldings([...tableHoldings, ...textHoldings]);
 
   if (holdings.length === 0) {

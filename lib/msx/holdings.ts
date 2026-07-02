@@ -156,6 +156,18 @@ export function rowToHolding(
   };
 }
 
+export function parsePdfTableText(text: string): ParsedHolding[] {
+  const rows = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !SKIP_ROW_PATTERN.test(line))
+    .map((line) => line.split(/\s{2,}|\t+/).map((cell) => cell.trim()))
+    .filter((row) => row.some((cell) => cell !== ""));
+
+  return rowsToHoldings(rows);
+}
+
 export function parseTextLines(text: string): ParsedHolding[] {
   const holdings: ParsedHolding[] = [];
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
