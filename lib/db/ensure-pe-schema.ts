@@ -1,16 +1,8 @@
-/**
- * Idempotently applies PE/VC tables to an existing production database.
- * Uses pg directly so we never invoke Prisma Migrate (avoids P3005 on Vercel).
- *
- * Run manually:
- *   node scripts/sync-pe-schema.cjs
- */
-require("dotenv").config({ path: ".env.local" });
-require("dotenv").config();
+import fs from "node:fs";
+import path from "node:path";
+import { Client } from "pg";
 
-const fs = require("fs");
-const path = require("path");
-const { Client } = require("pg");
+let ensurePromise: Promise<void> | null = null;
 
 function getDatabaseUrl() {
   return (
@@ -22,7 +14,7 @@ function getDatabaseUrl() {
   );
 }
 
-function splitSqlStatements(sql) {
+function splitSqlStatements(sql: string) {
   return sql
     .split(/;\s*(?:\n|$)/)
     .map((chunk) =>
@@ -35,7 +27,7 @@ function splitSqlStatements(sql) {
     .filter(Boolean);
 }
 
-function isIgnorableSchemaError(message) {
+function isIgnorableSchemaError(message: string) {
   return (
     message.includes("already exists") ||
     message.includes("duplicate_object") ||
@@ -44,7 +36,7 @@ function isIgnorableSchemaError(message) {
   );
 }
 
-async function tableExists(client, tableName) {
+async function tableExists(client: Client, tableName: string) {
   const result = await client.query(
     `SELECT EXISTS (
       SELECT 1
@@ -56,11 +48,10 @@ async function tableExists(client, tableName) {
   return Boolean(result.rows[0]?.exists);
 }
 
-async function main() {
+async function applyPeSchema() {
   const connectionString = getDatabaseUrl();
   if (!connectionString) {
-    console.log("No database URL set; skipping PE schema sync.");
-    return;
+    throw new Error("No database URL is configured for PE schema sync.");
   }
 
   const client = new Client({ connectionString });
@@ -68,11 +59,10 @@ async function main() {
 
   try {
     if (await tableExists(client, "PeCompany")) {
-      console.log("PE schema already present; nothing to do.");
       return;
     }
 
-    const sqlPath = path.join(__dirname, "..", "lib", "db", "pe-schema.sql");
+    const sqlPath = path.join(process.cwd(), "lib/db/pe-schema.sql");
     const sql = fs.readFileSync(sqlPath, "utf8");
     const statements = splitSqlStatements(sql);
 
@@ -82,21 +72,25 @@ async function main() {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (isIgnorableSchemaError(message)) continue;
-        throw error;
+        throw new Error(`PE schema statement failed: ${message}`);
       }
     }
 
     if (!(await tableExists(client, "PeCompany"))) {
       throw new Error("PE schema sync finished but PeCompany table is still missing.");
     }
-
-    console.log("PE schema applied successfully.");
   } finally {
     await client.end();
   }
 }
 
-main().catch((error) => {
-  console.error("PE schema sync failed:", error);
-  process.exit(1);
-});
+export function ensurePeSchema() {
+  if (!ensurePromise) {
+    ensurePromise = applyPeSchema().catch((error) => {
+      ensurePromise = null;
+      throw error;
+    });
+  }
+
+  return ensurePromise;
+}

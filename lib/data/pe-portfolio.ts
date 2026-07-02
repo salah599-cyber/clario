@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { ensurePeSchema } from "@/lib/db/ensure-pe-schema";
 import { ensureDefaultEntity, listEntities } from "@/lib/data/entities";
 import { peCompanyEntityFilter } from "@/lib/permissions/scoped-queries";
 import type { UserContext } from "@/lib/permissions/types";
@@ -57,7 +58,12 @@ const companyInclude = {
 
 export type PeCompanyDetail = NonNullable<Awaited<ReturnType<typeof getPeCompany>>>;
 
+async function ensurePeDataLayerReady() {
+  await ensurePeSchema();
+}
+
 export async function listPePortfolioEntities(ctx: UserContext) {
+  await ensurePeDataLayerReady();
   await ensureDefaultEntity();
   const filter = peCompanyEntityFilter(ctx);
   const filteredIds =
@@ -82,6 +88,7 @@ export async function listPeCompanies(
   ctx: UserContext,
   entityId?: string,
 ): Promise<PeCompanyListRow[]> {
+  await ensurePeDataLayerReady();
   const where = {
     ...peCompanyEntityFilter(ctx),
     ...(entityId ? { entityId } : {}),
@@ -175,6 +182,7 @@ export async function getPePortfolioSummary(
 }
 
 export async function getPeCompany(ctx: UserContext, id: string) {
+  await ensurePeDataLayerReady();
   return db.peCompany.findFirst({
     where: { id, ...peCompanyEntityFilter(ctx) },
     include: companyInclude,

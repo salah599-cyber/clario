@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { ensurePeSchema } from "@/lib/db/ensure-pe-schema";
 import { canAccess, getModulePermission } from "@/lib/permissions/access";
 import {
   assetEntityFilter,
@@ -449,6 +450,7 @@ export async function getDashboardSummary(ctx: UserContext): Promise<DashboardSu
 
   if (canAccess(ctx, "PRIVATE_EQUITY")) {
     try {
+      await ensurePeSchema();
       const peCompanies = await db.peCompany.findMany({
         where: {
           ...peCompanyEntityFilter(ctx),
