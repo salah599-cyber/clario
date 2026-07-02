@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Briefcase,
   Home,
+  Wallet,
 } from "lucide-react";
 import {
   Sidebar,
@@ -44,6 +45,7 @@ const platformNav = [
   { href: "/companies", label: "Companies", icon: Factory },
   { href: "/loans", label: "Loans", icon: HandCoins },
   { href: "/cheques", label: "Cheques", icon: Banknote },
+  { href: "/cash", label: "Cash Management", icon: Wallet },
   { href: "/proposals", label: "Proposals", icon: Lightbulb },
   { href: "/assets/bank-details", label: "Bank Details", icon: Landmark },
   { href: "/documents", label: "Documents", icon: FileText },

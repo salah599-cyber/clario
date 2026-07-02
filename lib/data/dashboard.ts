@@ -4,6 +4,7 @@ import { canAccess, getModulePermission } from "@/lib/permissions/access";
 import {
   assetEntityFilter,
   carEntityFilter,
+  cashBankAccountFilter,
   companyEntityFilter,
   documentFilter,
   expenseEntityFilter,
@@ -322,6 +323,41 @@ export async function getDashboardSummary(ctx: UserContext): Promise<DashboardSu
         date: cheque.dueDate,
         href: "/cheques/" + cheque.id,
         severity: cheque.dueDate < now ? "danger" : "warning",
+      });
+    }
+  }
+
+  if (canAccess(ctx, "CASH_MANAGEMENT")) {
+    try {
+      const { getCashSummary } = await import("@/lib/data/cash-management");
+      const cash = await getCashSummary(ctx);
+      const { formatOmr } = await import("@/lib/format");
+      moduleSummaries.push({
+        module: "CASH_MANAGEMENT",
+        label: "Cash Management",
+        href: "/cash",
+        count: cash.accountCount,
+        detail: formatOmr(cash.totalOmr),
+      });
+
+      if (cash.staleCount > 0) {
+        reminders.push({
+          id: "cash-stale",
+          kind: "document",
+          title: "Cash balances need updating",
+          subtitle: cash.staleCount + " account(s) not updated in 30+ days",
+          date: cash.lastUpdated,
+          href: "/cash",
+          severity: "warning",
+        });
+      }
+    } catch {
+      const cashCount = await db.bankAccount.count({ where: cashBankAccountFilter(ctx) });
+      moduleSummaries.push({
+        module: "CASH_MANAGEMENT",
+        label: "Cash Management",
+        href: "/cash",
+        count: cashCount,
       });
     }
   }

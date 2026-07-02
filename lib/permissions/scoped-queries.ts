@@ -91,3 +91,15 @@ export function reportsEntityFilter(ctx: UserContext) {
   if (level === "FILTERED") return { id: { in: ctx.entityIds } };
   return { id: "__none__" };
 }
+
+export function cashBankAccountFilter(ctx: UserContext) {
+  const level = getModulePermission(ctx, "CASH_MANAGEMENT");
+  if (level === "FULL" || level === "READ") return { isActive: true };
+  if (level === "FILTERED") {
+    return {
+      isActive: true,
+      OR: [{ entityId: null }, { entityId: { in: ctx.entityIds } }],
+    };
+  }
+  return { id: "__none__" };
+}

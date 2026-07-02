@@ -36,6 +36,7 @@ const MODULE_ICONS: Record<string, typeof Building2> = {
   PRIVATE_EQUITY: Briefcase,
   LOANS: HandCoins,
   CHEQUES: Banknote,
+  CASH_MANAGEMENT: Wallet,
   PROPOSALS: Lightbulb,
   DOCUMENTS: FileText,
   EXPENSES: Receipt,

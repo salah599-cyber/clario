@@ -50,6 +50,7 @@ export async function createBankAccount(input: CreateBankAccountInput) {
       currency: input.currency || "OMR",
       entityId: input.entityId || undefined,
       notes: input.notes?.trim() || undefined,
+      isActive: true,
     },
   });
 

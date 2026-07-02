@@ -31,6 +31,9 @@ const nextConfig: NextConfig = {
     "/real-estate/[id]": ["./lib/db/real-estate-schema.sql"],
     "/real-estate/new": ["./lib/db/real-estate-schema.sql"],
     "/real-estate/rent": ["./lib/db/real-estate-schema.sql"],
+    "/cash": ["./lib/db/cash-management-schema-statements.ts"],
+    "/cash/[id]": ["./lib/db/cash-management-schema-statements.ts"],
+    "/cash/new": ["./lib/db/cash-management-schema-statements.ts"],
     "/api/cron/sync-schema": [
       "./lib/db/pe-schema.sql",
       "./lib/db/public-markets-schema.sql",
