@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["ws", "@neondatabase/serverless", "pdf-parse", "pdfjs-dist"],
+  serverExternalPackages: ["ws", "@neondatabase/serverless", "pdf-parse", "pdfjs-dist", "exceljs"],
   experimental: {
     serverActions: {
       bodySizeLimit: "15mb",

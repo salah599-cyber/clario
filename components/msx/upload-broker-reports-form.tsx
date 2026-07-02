@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { importBrokerReports } from "@/lib/actions/msx-portfolio";
 import type { ImportFileResult } from "@/lib/msx/types";
 import { MAX_UPLOAD_LABEL, validateUploadFileSize } from "@/lib/upload-limits";
 import { EntitySelect, type EntityOption } from "@/components/platform/entity-select";
@@ -57,12 +56,36 @@ export function UploadBrokerReportsForm({
 
     startTransition(async () => {
       try {
-        const importResults = await importBrokerReports(formData);
-        setResults(importResults);
+        const response = await fetch("/api/portfolio/msx/import", {
+          method: "POST",
+          body: formData,
+          credentials: "same-origin",
+        });
+
+        const body = (await response.json().catch(() => ({}))) as {
+          results?: ImportFileResult[];
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(body.error ?? "Failed to import reports.");
+        }
+
+        setResults(body.results ?? []);
         form.reset();
-        router.refresh();
+
+        try {
+          router.refresh();
+        } catch {
+          // Refresh failures should not hide a successful import.
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to import reports.");
+        const message = err instanceof Error ? err.message : "Failed to import reports.";
+        if (message.toLowerCase().includes("body exceeded") || message.includes("413")) {
+          setError(`File is too large. Maximum upload size is ${MAX_UPLOAD_LABEL}.`);
+          return;
+        }
+        setError(message);
       }
     });
   }

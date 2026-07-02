@@ -1,25 +1,27 @@
-import { PDFParse } from "pdf-parse";
 import type { ParseReportResult } from "./types";
 import { detectBroker, extractAccountNumber, extractAsOfDate } from "./detect-broker";
 import { dedupeHoldings, parseTextLines, rowsToHoldings } from "./holdings";
 
 async function extractPdfContent(buffer: Buffer): Promise<{ text: string; tableRows: unknown[][] }> {
+  const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: buffer });
   try {
-    const [textResult, tableResult] = await Promise.all([
-      parser.getText(),
-      parser.getTable().catch(() => null),
-    ]);
+    const textResult = await parser.getText();
+    let tableRows: unknown[][] = [];
 
-    const tableRows: unknown[][] = [];
-    if (tableResult?.pages) {
-      for (const page of tableResult.pages) {
-        for (const table of page.tables ?? []) {
-          for (const row of table) {
-            tableRows.push(row);
+    try {
+      const tableResult = await parser.getTable();
+      if (tableResult?.pages) {
+        for (const page of tableResult.pages) {
+          for (const table of page.tables ?? []) {
+            for (const row of table) {
+              tableRows.push(row);
+            }
           }
         }
       }
+    } catch {
+      tableRows = [];
     }
 
     return { text: textResult.text ?? "", tableRows };
@@ -30,7 +32,25 @@ async function extractPdfContent(buffer: Buffer): Promise<{ text: string; tableR
 
 export async function parsePdfReport(buffer: Buffer, fileName: string): Promise<ParseReportResult> {
   const warnings: string[] = [];
-  const { text, tableRows } = await extractPdfContent(buffer);
+
+  let text = "";
+  let tableRows: unknown[][] = [];
+
+  try {
+    const extracted = await extractPdfContent(buffer);
+    text = extracted.text;
+    tableRows = extracted.tableRows;
+  } catch (error) {
+    return {
+      broker: detectBroker(fileName, ""),
+      holdings: [],
+      warnings: [
+        error instanceof Error
+          ? `PDF parsing failed: ${error.message}`
+          : "PDF parsing failed. Try uploading the Excel version of your broker statement.",
+      ],
+    };
+  }
 
   if (!text.trim() && tableRows.length === 0) {
     return {

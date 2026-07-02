@@ -27,7 +27,7 @@ export type ImportFileResult = {
   fileName: string;
   broker: string;
   accountNumber?: string;
-  asOfDate?: Date;
+  asOfDate?: string;
   holdingsImported: number;
   warnings: string[];
   error?: string;

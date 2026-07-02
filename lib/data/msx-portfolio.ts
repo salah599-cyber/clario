@@ -178,7 +178,11 @@ export async function getMsxPortfolioSummary(
   };
 }
 
+import { ensureDefaultEntity } from "@/lib/data/entities";
+
 export async function listMsxPortfolioEntities(ctx: UserContext) {
+  await ensureDefaultEntity();
+
   const entityFilter = assetEntityFilter(ctx);
   const filteredIds =
     "entityId" in entityFilter && entityFilter.entityId && "in" in entityFilter.entityId

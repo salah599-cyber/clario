@@ -1,9 +1,8 @@
-import ExcelJS from "exceljs";
 import type { ParseReportResult } from "./types";
 import { detectBroker, extractAccountNumber, extractAsOfDate } from "./detect-broker";
 import { dedupeHoldings, rowsToHoldings } from "./holdings";
 
-function sheetToRows(sheet: ExcelJS.Worksheet): unknown[][] {
+function sheetToRows(sheet: import("exceljs").Worksheet): unknown[][] {
   const rows: unknown[][] = [];
   sheet.eachRow({ includeEmpty: false }, (row) => {
     const values = row.values;
@@ -15,6 +14,7 @@ function sheetToRows(sheet: ExcelJS.Worksheet): unknown[][] {
 }
 
 export async function parseExcelReport(buffer: Buffer, fileName: string): Promise<ParseReportResult> {
+  const ExcelJS = await import("exceljs");
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(buffer as unknown as import("exceljs").Buffer);
 
