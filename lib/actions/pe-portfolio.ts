@@ -5,6 +5,11 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { deleteBlobUrl } from "@/lib/blob";
 import { logAudit } from "@/lib/audit/log";
+import { ensureAssetDistributionSchema } from "@/lib/db/ensure-asset-distribution-schema";
+import {
+  deleteMirroredPeDistribution,
+  mirrorPeDistributionToAsset,
+} from "@/lib/assets/pe-distribution-sync";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
 import { peCompanyEntityFilter } from "@/lib/permissions/scoped-queries";
 import { PE_PATH, peStatusToAssetStatus, syncPeCompanyAsset } from "@/lib/pe/asset-sync";
@@ -548,6 +553,18 @@ export async function upsertPeDistribution(formData: FormData) {
     ? await db.peDistribution.update({ where: { id }, data })
     : await db.peDistribution.create({ data });
 
+  const company = await db.peCompany.findUnique({
+    where: { id: companyId },
+    select: { assetId: true, reportingCurrency: true },
+  });
+  if (company?.assetId) {
+    await ensureAssetDistributionSchema();
+    await mirrorPeDistributionToAsset(distribution, company.assetId, company.reportingCurrency);
+    revalidatePath("/assets");
+    revalidatePath("/assets/" + company.assetId);
+    revalidatePath("/dashboard");
+  }
+
   await logAudit({
     userId: ctx.id,
     action: id ? "UPDATE" : "CREATE",
@@ -570,6 +587,18 @@ export async function deletePeDistribution(id: string) {
   if (!distribution) throw new Error("Distribution not found.");
 
   await db.peDistribution.delete({ where: { id } });
+
+  await ensureAssetDistributionSchema();
+  await deleteMirroredPeDistribution(id);
+  const company = await db.peCompany.findUnique({
+    where: { id: distribution.companyId },
+    select: { assetId: true },
+  });
+  if (company?.assetId) {
+    revalidatePath("/assets");
+    revalidatePath("/assets/" + company.assetId);
+    revalidatePath("/dashboard");
+  }
 
   await logAudit({
     userId: ctx.id,

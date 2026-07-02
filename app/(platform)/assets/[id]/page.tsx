@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { PlatformHeader } from "@/components/platform/platform-header";
 import { DeleteEntryButton } from "@/components/platform/delete-entry-button";
 import { EditLinkButton } from "@/components/platform/edit-link-button";
+import { AssetDistributionsSection } from "@/components/assets/asset-distributions-section";
 import { AssetExitSummary } from "@/components/assets/asset-exit-summary";
 import { RecordAssetExitForm } from "@/components/assets/record-asset-exit-form";
 import { getAsset, deleteAsset } from "@/lib/actions/assets";
+import { computeAssetDistributionMetrics } from "@/lib/assets/distribution-metrics";
 import { canWrite, requireModuleAccess } from "@/lib/permissions/access";
 import { ASSET_CATEGORY_LABELS, ASSET_STATUS_LABELS } from "@/lib/labels";
 import { formatMoney, formatDate, formatDecimalInput } from "@/lib/format";
@@ -14,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 function linkedModule(asset: NonNullable<Awaited<ReturnType<typeof getAsset>>>) {
+  if (asset.peCompany) return { label: "PE / VC", href: "/portfolio/pe/" + asset.peCompany.id };
   if (asset.landParcel) return { label: "Lands", href: "/lands/" + asset.landParcel.id };
   if (asset.vehicle) return { label: "Cars", href: "/cars/" + asset.vehicle.id };
   if (asset.registeredCompany) return { label: "Companies", href: "/companies/" + asset.registeredCompany.id };
@@ -41,6 +44,11 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
   const linked = linkedModule(asset);
   const showWrite = canWrite(ctx, "ASSETS") && !linked;
   const showExit = canRecordExit(ctx, asset);
+  const distributionMetrics = computeAssetDistributionMetrics(
+    asset.distributions,
+    asset.acquisitionCost,
+  );
+  const canRecordDistributions = canWrite(ctx, "ASSETS");
 
   return (
     <>
@@ -127,6 +135,16 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
         {asset.exit ? (
           <AssetExitSummary exit={asset.exit} assetId={asset.id} showActions={showWrite || showExit} />
         ) : null}
+
+        <AssetDistributionsSection
+          assetId={asset.id}
+          assetName={asset.name}
+          currency={asset.currency}
+          distributions={asset.distributions}
+          metrics={distributionMetrics}
+          canEdit={canRecordDistributions}
+          peCompany={asset.peCompany}
+        />
       </main>
     </>
   );
